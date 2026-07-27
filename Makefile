@@ -13,7 +13,7 @@ ARVORE_RUMBRO_NEGRA_OBJ= $(COD_DIR)/arvores/arvore_rumbro_negra.o
 ARVORE_RUMBRO_NEGRA_HEADER= $(COD_DIR)/arvores/arvore_rumbro_negra.h
 QUEUE_NEGRA= $(OBJ_DIR)/Queue_negra.o
 
-ARVORE_AVL_COD= $(COD_DIR)/arvores/arvore-binaria-de-busca.c $(COD_DIR)/arvores/arvore-de-busca-AVL.c $(COD_DIR)/Queue.c
+ARVORE_AVL_COD= $(COD_DIR)/arvores/arvore-binaria-de-busca.c $(COD_DIR)/arvores/arvore-de-busca-AVL.c $(COD_DIR)/estrutura_de_dados/Queue.c
 ARVORE_AVL_OBJ := $(addprefix $(OBJ_DIR)/, $(notdir $(ARVORE_AVL_COD:.c=.o)))
 ARVORE_AVL_HEADER = $(COD_DIR)/arvores/arvore-binaria-de-busca.h $(COD_DIR)/arvores/arvore-base.h
 
@@ -21,9 +21,8 @@ MERGE_SORT_COD= $(COD_DIR)/algoritimos_ordenação/merge_sort.c
 MERGE_SORT_HEADER = $(COD_DIR)/arvores/merge_sort.h
 MERGE_SORT_OBJ := $(addprefix $(OBJ_DIR)/, $(notdir $(MERGE_SORT_COD:.c=.o)))
 
-HASH_COD = $(COD_DIR)/hash.c
-HASH_HEADER = $(COD_DIR)/hash.h
-HASH_BIN = 
+HASH_COD = $(COD_DIR)/estrutura_de_dados/hash.c
+HASH_HEADER = $(COD_DIR)/estrutura_de_dados/hash.h
 
 TETRIS_JOGO = ./codigo-fonte/jogos/tetris.c
 JOGO-DA-VELHA = ./codigo-fonte/jogos/jogo-da-velha.c
@@ -105,11 +104,12 @@ $(ARVORE_AVL_OBJ): $(ARVORE_AVL_COD) $(ARVORE_AVL_HEADER)
 	@mkdir -p $(OBJ_DIR)
 	$(CC) -c $(COD_DIR)/arvores/arvore-binaria-de-busca.c -o  $(OBJ_DIR)/arvore-binaria-de-busca.o
 	$(CC) -c $(COD_DIR)/arvores/arvore-de-busca-AVL.c -o  $(OBJ_DIR)/arvore-de-busca-AVL.o
-	$(CC) -c $(COD_DIR)/Queue.c -o  $(OBJ_DIR)/Queue.o
+	$(CC) -c $(COD_DIR)/estrutura_de_dados/Queue.c -o  $(OBJ_DIR)/Queue.o
 
 $(DIRETORIOS):
 	@mkdir $(OBJ_DIR)
 	@mkdir $(BIN_DIR)
+	@mkdir ./libs
 
 clean:
 	rm $(OBJ_DIR)/*.o

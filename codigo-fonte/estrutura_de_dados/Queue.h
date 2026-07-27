@@ -12,7 +12,7 @@
 #define TAM_MAX 1000 //so um limite minimo mais pode ser estendito para mais
 #include <stdlib.h> 
 #include <stdbool.h>
-#include "./arvores/arvore-base.h" // essa e so uma adptação para usar em arvores binarias
+#include "../arvores/arvore-base.h" // essa e so uma adptação para usar em arvores binarias
 
 typedef struct Element{
     NODE node;

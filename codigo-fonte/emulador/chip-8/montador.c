@@ -24,7 +24,7 @@ int main(int argc, char *argv[]){
         }
     }
     fclose(fd);
-    for(int i = 0; i < array.leght; i++){
+    for(int i = 0; i < array.length; i++){
         if(array.no[i].type == STRING){
             char *resultado = recuperar_dado(&array, i);
             int size = strlen(resultado);
@@ -56,9 +56,9 @@ int main(int argc, char *argv[]){
             add_data(&array, UINT16, &opcode);
         }
     }
-    printf("%i %i\n", array.max, array.leght);
+    printf("%i %i\n", array.max, array.length);
     FILE *file = fopen("binario.ch8", "wb");
-    for(int i = 0; i < array.leght; i++){
+    for(int i = 0; i < array.length; i++){
         if(array.no[i].type == STRING) printf("strings: %s\n", recuperar_dado(&array, i));
         if(array.no[i].type == UINT16){
             uint16_t dado = *(uint16_t *)(recuperar_dado(&array, i));

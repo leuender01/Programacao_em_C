@@ -22,7 +22,7 @@ int main(int argc, char *argv[]){
     }
     fclose(fd);
 
-    for(int i = 0; i < array.leght; i++){
+    for(int i = 0; i < array.length; i++){
         if(array.no[i].type == UINT16) {
             uint16_t opcode = *(uint16_t *)recuperar_dado(&array, i);
             uint8_t byte[4] = {0};
@@ -44,9 +44,9 @@ int main(int argc, char *argv[]){
         }
     }
     FILE *fc = fopen("desmontador.s", "w");
-    for(int i = 0; i < array.leght; i++){
+    for(int i = 0; i < array.length; i++){
         if(array.no[i].type == STRING) {
-            printf("letra: %s\n", recuperar_dado(&array, i));
+            printf("letra: %s\n", (char *)recuperar_dado(&array, i));
             char *frase = recuperar_dado(&array, i);
             fprintf(fc,"%s\n" ,frase);
         }

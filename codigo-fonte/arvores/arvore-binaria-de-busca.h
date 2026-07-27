@@ -14,7 +14,7 @@
 
 #include <stdbool.h> // biblioteca de booleanos
 #include "arvore-base.h" // inclui a estrutura base para uma arvore
-#include "../Queue.h" // inclui o cabeçalho do codigo da fila
+#include "../estrutura_de_dados/Queue.h" // inclui o cabeçalho do codigo da fila
 
 //---------------Prototipos_de_funções------------------
 
