@@ -1,6 +1,6 @@
 
-# PROJETOS DA FACULADE
-## FAZENDO COISAS COM A BIBLIOTECA NCURSES
+# 👨‍🏫PROJETOS DA FACULADE
+## 📖FAZENDO COISAS COM A BIBLIOTECA NCURSES
 
 *Para funcionar precisa do compilador **clang** , a ferrameta **make** e a Biblioteca **ncurses**, funciona exclusivamente no Linux e a ferramenta git.*
 
@@ -20,7 +20,7 @@ sudo apt install ncurses clang make git
 https://github.com/leuender01/estruturas_de_dad0s_em-C.git
 ````
 
-## TETRIS
+## 🎮TETRIS
 
 <img src="imagens/tetris.GIF" width="500"> 
 
@@ -30,7 +30,7 @@ https://github.com/leuender01/estruturas_de_dad0s_em-C.git
 ````bash
 make tetris
 ````
-## JOGO DA VELHA 
+## 🎮JOGO DA VELHA 
 
 <img src="imagens/jogo-da-velha.GIF" width="500">
 
