@@ -13,6 +13,7 @@ typedef struct{
     char buffer[1024];
 } Transport;             
 
+static int aguardar_fd(int fd, long timeout_usec);
 Transport Tcp(const char *tipo, int port);
 void calcular_chave_websocket(const char *key, char *output);
 void *websocket_serve(void *arg);

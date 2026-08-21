@@ -19,11 +19,13 @@
 
 const char erro404[] = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 const char resposta101[] = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ";
+const char script_injection[] = "<script>const ws = new WebSocket(\'ws:127.0.0.1:8082\');ws.onopen=()=>{console.log(\"Conectado ao WebSocket!\");};ws.onmessage = (event) => {if( event.data === \"reload\"){location.reload();};};ws.onerror=(error)=>{console.log(\"Erro no WebSocket\", error);}; </script>";
 const int ws_port = 8082;
 const int http_port = 8081;
 const char ws_frame[8] = {0x81, 0x06, 'r','e','l','o','a','d'};
 volatile int rodando = 1;
 volatile int flag = -1;
+const int time_aguardar = 20000;
 
 pthread_mutex_t block;
 
@@ -46,6 +48,13 @@ int main(void)
     usleep(500000);
 
     while(rodando){
+        int pronto = aguardar_fd(servidor.socket_fd, time_aguardar );
+        if(pronto < 0){
+            if(errno == EINTR) continue; 
+            break;
+        }
+        if(pronto == 0) continue;
+
         printf("\033[1;37m[HTTP]\033[0m: Esperando uma conexao na porta %i...\n", http_port);
         servidor.connection_fd = accept(servidor.socket_fd, (struct sockaddr *)&servidor.client, &servidor.client_size);
         if (rodando <= 0){
@@ -91,7 +100,7 @@ Transport Tcp(const char *tipo, int port)
 {
     Transport new;
     
-    new.client_size = (socklen_t)sizeof(new.client_size);                                                         
+    new.client_size = sizeof(new.client);                                                         
     new.socket_fd = socket(AF_INET, SOCK_STREAM, 0);                                
                                                                                  
     if(new.socket_fd > 0) printf("\033[1;32m[WS]\033[0m Socket aberto:\n");                                
@@ -158,9 +167,15 @@ void *websocket_serve(void *arg)
     
     while(rodando)
     {
-        websocket->connection_fd = accept(websocket->socket_fd, (struct sockaddr*)&websocket->client, &websocket->client_size);
-        memset(websocket->buffer, 0, sizeof(websocket->buffer));
-        size_t bytes_lidos = read(websocket->connection_fd, websocket->buffer, sizeof(websocket->buffer) - 1);
+        int pronto = aguardar_fd(websocket->socket_fd , time_aguardar );
+        if(pronto < 0){
+            if(errno == EINTR) continue; 
+            break;
+        }
+        if(pronto == 0) continue;
+            websocket->connection_fd = accept(websocket->socket_fd, (struct sockaddr*)&websocket->client, &websocket->client_size);
+            memset(websocket->buffer, 0, sizeof(websocket->buffer));
+            size_t bytes_lidos = read(websocket->connection_fd, websocket->buffer, sizeof(websocket->buffer) - 1);
         if(bytes_lidos <= 0)
         {
             printf("erro na conexao\n");
@@ -192,6 +207,7 @@ void *websocket_serve(void *arg)
                 strcat(resposta, chave_aceita);
                 strcat(resposta, "\r\n\r\n");
                 write(websocket->connection_fd, resposta, strlen(resposta));
+                free(resposta);
 
                 pthread_mutex_lock(&block);
                 flag = websocket->connection_fd;
@@ -199,30 +215,46 @@ void *websocket_serve(void *arg)
 
                 printf("\033[32m[\033[1mWS\033[0m\033[32m]\033[0m: Conexao estabelecida com sucesso\n\n");
                 memset(websocket->buffer, 0,sizeof(websocket->buffer));
-                size_t bytes_lidos;
-                if((bytes_lidos = read(websocket->connection_fd, websocket->buffer, sizeof(websocket->buffer))) > 0)
-                {
-                    if((websocket->buffer[0] & 0x0F) == 0x01)
+                int pronto_msg = aguardar_fd(websocket->connection_fd, time_aguardar);
+                if(pronto_msg < 0 && errno != EINTR){
+                    printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Conexao perdida com o navegador.\n");
+                    pthread_mutex_lock(&block);
+                    if(flag == websocket->connection_fd) flag = -1;
+                    pthread_mutex_unlock(&block);
+                    close(websocket->connection_fd);
+                }else if(pronto_msg > 0){
+                    size_t bytes_lidos;
+                    if((bytes_lidos = read(websocket->connection_fd, websocket->buffer, sizeof(websocket->buffer))) > 0)
                     {
-                        int playload_len = websocket->buffer[1] & 0x7F;
-                        int mask_index = 2;
-                        int data_index = mask_index + 4;
-                        unsigned char mask[4];
-                        for(int i = 0; i < 4; i++) mask[i] = websocket->buffer[mask_index + i];
+                        if((websocket->buffer[0] & 0x0F) == 0x01)
+                        {
+                            int playload_len = websocket->buffer[1] & 0x7F;
+                            int mask_index = 2;
+                            int data_index = mask_index + 4;
+                            unsigned char mask[4];
+                            for(int i = 0; i < 4; i++) mask[i] = websocket->buffer[mask_index + i];
 
-                        char mensagem[1024];
-                        memset(mensagem, 0, sizeof(mensagem));
+                            char mensagem[1024];
+                            memset(mensagem, 0, sizeof(mensagem));
 
-                        for(int i = 0; i < playload_len; i++) mensagem[i] = websocket->buffer[data_index + i] ^ mask[i % 4];
-                        mensagem[playload_len] = '\0';
-                        printf("%s\n", mensagem);
+                            for(int i = 0; i < playload_len; i++) mensagem[i] = websocket->buffer[data_index + i] ^ mask[i % 4];
+                            mensagem[playload_len] = '\0';
+                            printf("%s\n", mensagem);
+                        }
+                    }else{
+                        printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Conexao perdida com o navegador.\n");
+                        pthread_mutex_lock(&block);
+                        if(flag == websocket->connection_fd) flag = -1;
+                        pthread_mutex_unlock(&block);
+                        close(websocket->connection_fd);
                     }
                 }
-            }else{
-                write(websocket->connection_fd, erro404, sizeof(erro404));    
+                }else{
+                write(websocket->connection_fd, erro404, strlen(erro404));
                 printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Cliente encerrou a conexao na porta %d.\n", ws_port);
                 close(websocket->connection_fd);
                 break;
+
             }
         }
     }
@@ -264,8 +296,8 @@ char *ler_arquivo(const char* path, const char *type)
         fseek(fd, 0, SEEK_END);                                    
         long tamanho_bytes = ftell(fd);                            
         rewind(fd);                                                
-                                                                        
         buffer = (char *)malloc(tamanho_bytes + 1);               
+
         if(buffer == NULL)                                              
         {                                                               
             perror("erro alocar memoria\n");                              
@@ -283,11 +315,31 @@ char *ler_arquivo(const char* path, const char *type)
         fclose(fd);                                                
         buffer[tamanho_bytes] = '\0'; 
         size = tamanho_bytes;
+        if(!strcmp(type,"text/html")){
+        char *novo_buffer = malloc(size + strlen(script_injection) + 1);
+        
+        // Tenta encontrar a tag </body> para injetar o script logo antes dela
+        char *body_tag = strstr(buffer, "</body>");
+        
+        if (body_tag) {
+            int pos = body_tag - buffer;
+            strncpy(novo_buffer, buffer, pos);
+            novo_buffer[pos] = '\0';
+            strcat(novo_buffer, script_injection);
+            strcat(novo_buffer, body_tag); // Adiciona o </body> e o resto do HTML
+        } else {
+            strcpy(novo_buffer, buffer);
+            strcat(novo_buffer, script_injection);
+        }
+        
+        free(buffer); 
+        buffer = novo_buffer; 
+        size = strlen(buffer); 
+        }
     }
     if(size < 3) return NULL; 
     sprintf(cabecalho,"HTTP/1.1 200 OK\r\nContent-Type: %s\r\nContent-Length: %i\r\nConnection: close\r\n\r\n", type, size); 
     char *resposta = malloc(strlen(cabecalho) + strlen(buffer) + 1);                                          
-                                                                                                                   
     strcpy(resposta, cabecalho);                                                                             
     strcat(resposta,buffer);                                                                               
     free(buffer);                                                                                         
@@ -307,6 +359,12 @@ void *notificacao(void *arg)
 
     while(rodando)
     {
+        int pronto = aguardar_fd(fd , time_aguardar );
+        if(pronto < 0){
+            if(errno == EINTR) continue; 
+            break;
+        }
+        if(pronto == 0) continue;
         if(rodando == 0) break;
         int lenght = read(fd, buffer, BUFFER_LEN);
         if(lenght <  0)
@@ -360,4 +418,13 @@ void captura_signal(int sinal){
     pthread_mutex_lock(&block);
     rodando = 0;
     pthread_mutex_unlock(&block);
+}
+
+static int aguardar_fd(int fd, long timeout_usec)
+{
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(fd, &readfds);
+    struct timeval timeout = {0, timeout_usec};
+    return select(fd + 1, &readfds, NULL, NULL, &timeout);
 }
