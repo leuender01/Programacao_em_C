@@ -6,11 +6,18 @@
 #define BUFFER_LEN (1024 * (EVENT_SIZE + 16))
 #define LOCAL_HOST "0.0.0.0"
 
+#include <sys/socket.h>
+#include <netinet/in.h>
+
 typedef struct{
     int socket_fd, connection_fd;  
     socklen_t client_size;
-    struct sockaddr_in myserve, client;
+    struct sockaddr_in myserve;
+    struct sockaddr_in client;
     char buffer[1024];
+    union {
+        int websocket_ative;
+    };
 } Transport;             
 
 static int aguardar_fd(int fd, long timeout_usec);
