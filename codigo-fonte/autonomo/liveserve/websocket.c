@@ -13,7 +13,9 @@
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
 #define HASH_H
+#define QUEUEN_H
 #include "hash.h"
+#include "Queue.h"
 
 const char erro404[] = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 const char resposta101[] = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ";
@@ -24,6 +26,8 @@ extern int flag;
 extern pthread_mutex_t block;
 
 HASH clientes_threads;
+Queue output;
+Queue input;
 static pthread_mutex_t clientes_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 char *string_gerada(char *key_start)
@@ -38,13 +42,13 @@ char *string_gerada(char *key_start)
             k++;
         }
         client_key[k] = '\0';
-        printf("\033[32m[\033[1mWS\033[0m\033[32m]\033[0m Chave recebida do Navegador: '%s'\n", client_key);
+//        printf("\033[32m[\033[1mWS\033[0m\033[32m]\033[0m Chave recebida do Navegador: '%s'\n", client_key);
 
         char chave_aceita[128];
         memset(chave_aceita, 0, sizeof(chave_aceita));
         calcular_chave_websocket(client_key, chave_aceita);
 
-        printf("\033[32m[\033[1mWS\033[0m\033[32m]\033[0m: Chave Base64 gerada: '%s'\n", chave_aceita);
+//        printf("\033[32m[\033[1mWS\033[0m\033[32m]\033[0m: Chave Base64 gerada: '%s'\n", chave_aceita);
         char *resposta = malloc(strlen(resposta101) + strlen(chave_aceita) + 5);
         strcpy(resposta, resposta101);
         strcat(resposta, chave_aceita);
@@ -109,6 +113,9 @@ void opcodesData(Transport *websocket, int opcode){
             char mensagem[1024];
             memset(mensagem, 0, sizeof(mensagem));
             for(int i = 0; i < playload_len; i++) mensagem[i] = websocket->buffer[data_index + i] ^ mask[i % 4];
+            pthread_mutex_lock(&block);
+            Enqueue(&input, mensagem, websocket->connection_fd);
+            pthread_mutex_unlock(&block);
             printf("mensagem %s\n", mensagem);
             break;
         case 0x08:
@@ -229,11 +236,13 @@ void *websocket_serve(void *arg)
 {
     Transport *websocket = (Transport *)arg;
     inithash(&clientes_threads);
+    newQueue(&output);
+    newQueue(&input);
     printf("Iniciando Websocket\n");
     if(websocket == NULL) exit(EXIT_FAILURE);
     Transport *cliente = NULL;
+    printf("iniciado com sucesso esperando um conexao na porta no enderço http://localhost:%d\n", ws_port);
     while (rodando) {
-        printf("iniciado com sucesso esperando um conexao na porta no enderço http://localhost:%d\n", ws_port);
         int pronto = aguardar_fd(websocket->socket_fd , time_aguardar );
         if(pronto == 0) continue;
         if(pronto < 0 && errno != EINTR) continue;
@@ -274,6 +283,8 @@ void *websocket_serve(void *arg)
     pthread_mutex_lock(&clientes_mutex);
     close(websocket->socket_fd);
     freehash(&clientes_threads);
+    freeQueuen(&output);
+    freeQueuen(&input);
     pthread_mutex_unlock(&clientes_mutex);
     return NULL;
 }

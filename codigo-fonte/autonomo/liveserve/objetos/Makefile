@@ -1,12 +1,13 @@
-Tcp: ../Tcp.c
-	gcc -g -c ../Tcp.c
-	gcc -g ./Tcp.o ./tcp_teste.c -o ./tcp_teste
-	valgrind --leak-check=full ./tcp_teste
 
-websocket: ../websocket.c captura_signal hash
+Tcp: ../Tcp.c diretorio
+	gcc -g -c ../Tcp.c
+	gcc -g ./Tcp.o ./tcp_teste.c -o bin/tcp_teste
+	valgrind --leak-check=full bin/tcp_teste
+
+websocket: ../websocket.c captura_signal hash Queue diretorio
 	gcc -g -c ../websocket.c
-	gcc -g ./websocket_teste.c ./websocket.o ./Tcp.o ./capturar_signal.o ./hash.o -o ./websocket_teste -lcrypto
-	valgrind --leak-check=full ./websocket_teste
+	gcc -g ./websocket_teste.c ./websocket.o ./Tcp.o ./capturar_signal.o ./hash.o ./Queue.o -o bin/websocket_teste -lcrypto
+	valgrind --leak-check=full bin/websocket_teste
 
 captura_signal: ../capturar_signal.c
 	gcc -g -c ../capturar_signal.c
@@ -16,8 +17,15 @@ hash: ../hash.c
 
 Queue: ../Queue.c
 	gcc -g -c ../Queue.c
-	gcc -g Queue.o Queuen_teste.c -o Queuen_teste
-	valgrind --leak-check=full ./Queuen_teste
+
+Queue_teste: Queue diretorio
+	gcc -g Queue.o Queuen_teste.c -o bin/Queuen_teste
+	@echo "execultado ..." 
+	valgrind --leak-check=full bin/Queuen_teste
+	gdb bin/Queuen_teste
+
+diretorio:
+	mkdir bin
 
 clean:
 	rm -f *.o 

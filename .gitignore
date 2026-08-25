@@ -5,11 +5,13 @@
 *.tar.gz
 *.su
 .vscode
-/bin
-/objects
+bin/
+objects/
 *.s
 *.html
 *.js
 *.css
 *.json
 *.ch8
+imagemLive/
+vgcore.*

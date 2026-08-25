@@ -1,22 +1,22 @@
 #ifdef QUEUEN_H
 
-struct node {
+struct Queuedata {
     int socket_fd;
     char *strig;
-    struct node *prox;
+    struct Queuedata *prox;
 };
 
 typedef struct{
-    struct node *tail;
-    struct node *first;
+    struct Queuedata *tail;
+    struct Queuedata *first;
     unsigned long int size;
 } Queue;
 
 int newQueue(Queue *p);
 int empytQueue(Queue *p);
 int Enqueue(Queue *p, const char *string, int socket_fd);
-struct node Dequeue(Queue *p);
-struct node peekQueue(Queue *p);
+struct Queuedata Dequeue(Queue *p);
+struct Queuedata peekQueue(Queue *p);
 int freeQueuen(Queue *p);
 
 #endif
