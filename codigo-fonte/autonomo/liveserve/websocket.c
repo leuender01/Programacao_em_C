@@ -1,5 +1,3 @@
-#include <asm-generic/errno.h>
-#include <bits/types/struct_timeval.h>
 #include <stdio.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -115,6 +113,9 @@ void opcodesData(Transport *websocket, int opcode){
             break;
         case 0x08:
             printf("Navegador solicitou fechamento\n");
+            pthread_mutex_lock(&block);
+            deleteHash(&clientes_threads ,websocket->connection_fd);
+            pthread_mutex_unlock(&block);
             websocket->websocket_ative = 0;
             close(websocket->connection_fd);
             break;
@@ -162,6 +163,9 @@ void *websocket_read(void *arg)
         {
             write(websocket->connection_fd, erro404, strlen(erro404));
             printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Cliente encerrou a conexao na porta %d.\n", ws_port);
+            pthread_mutex_lock(&block);
+            deleteHash(&clientes_threads ,websocket->connection_fd);
+            pthread_mutex_unlock(&block);
             close(websocket->connection_fd);
             free(websocket);
             return NULL;
@@ -186,6 +190,7 @@ void *websocket_read(void *arg)
                 printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Conexao perdida com o navegador.\n");
                 pthread_mutex_lock(&block);
                 if(flag == websocket->connection_fd) flag = -1;
+                deleteHash(&clientes_threads ,websocket->connection_fd);
                 pthread_mutex_unlock(&block);
                 close(websocket->connection_fd);
             }else if(pronto_msg > 0){
@@ -195,6 +200,7 @@ void *websocket_read(void *arg)
                     printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Conexao perdida com o navegador.\n");
                     pthread_mutex_lock(&block);
                     if(flag == websocket->connection_fd) flag = -1;
+                    deleteHash(&clientes_threads ,websocket->connection_fd);
                     pthread_mutex_unlock(&block);
                     websocket->websocket_ative = 0;
                     close(websocket->connection_fd);
@@ -204,10 +210,16 @@ void *websocket_read(void *arg)
                 opcodesData(websocket, opcode);
             }
         }
+        pthread_mutex_lock(&block);
+        deleteHash(&clientes_threads ,websocket->connection_fd);
+        pthread_mutex_unlock(&block);
         close(websocket->connection_fd);
         free(websocket);
         return NULL;
     }
+    pthread_mutex_lock(&block);
+    deleteHash(&clientes_threads ,websocket->connection_fd);
+    pthread_mutex_unlock(&block);
     close(websocket->connection_fd);
     free(websocket);
     return NULL;

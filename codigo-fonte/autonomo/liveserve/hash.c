@@ -32,7 +32,7 @@ unsigned long calcularHash(char *string){
 int insertHash(HASH *table, int key, pthread_t value){
     if(key < 0) return 1;
 //    unsigned long hash = calcularHash((char *)key);
-    unsigned long hash = value % TAM_INICIAL;
+    unsigned long hash = key % TAM_INICIAL;
     if(table->no[hash].key >=  0){
         struct node *no = malloc(sizeof(struct node));
         if(no == NULL){
