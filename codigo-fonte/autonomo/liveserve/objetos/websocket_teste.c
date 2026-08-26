@@ -13,7 +13,7 @@ int ws_port = 8081;
 volatile int rodando = 1;
 volatile int flag = -1;
 int time_aguardar = 200000;
-pthread_mutex_t block;
+pthread_mutex_t block = PTHREAD_MUTEX_INITIALIZER;
 
 int main(void){
     signal(SIGINT, captura_signal);
@@ -28,8 +28,7 @@ int main(void){
             free(data.strig);
         }
         pthread_mutex_unlock(&block);
-        
-        usleep(100);
+        usleep(200);
     }
     pthread_join(websocket_id,NULL);
     return 0;

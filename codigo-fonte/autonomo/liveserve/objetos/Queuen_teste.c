@@ -15,7 +15,7 @@ int main(void)
     printf("%s, %d\n", peekQueue(&fila).strig, peekQueue(&fila).socket_fd);
     printf("a fila esta vazia: %d\n",empytQueue(&fila));
     while (!empytQueue(&fila)){
-        struct node teste = Dequeue(&fila);
+        struct Queuedata teste = Dequeue(&fila);
         printf("a fila esta vazia: %d\n",empytQueue(&fila));
         printf("%s, %ld\n", teste.strig, fila.size);
         free(teste.strig);

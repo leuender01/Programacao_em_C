@@ -22,13 +22,20 @@ const char resposta101[] = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websock
 extern volatile int rodando;
 extern int ws_port;
 extern int time_aguardar;
-extern int flag;
+extern volatile int flag;
 extern pthread_mutex_t block;
 
 HASH clientes_threads;
 Queue output;
 Queue input;
-static pthread_mutex_t clientes_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void *liberaThread(void *arg){
+    Transport *websocket = (Transport *)arg;
+    pthread_mutex_lock(&block);
+    deleteHash(&clientes_threads, websocket->connection_fd);
+    pthread_mutex_unlock(&block);
+    pthread_exit(NULL);
+}
 
 char *string_gerada(char *key_start)
 {
@@ -58,7 +65,7 @@ char *string_gerada(char *key_start)
 
 void enviar_mensagem_websocket(int client_fd, const char *mensagem) {
     if (client_fd <= 0) {
-        printf("Nenhum cliente conectado para enviar mensagem.\n");
+//        printf("Nenhum cliente conectado para enviar mensagem.\n");
         return;
     }
 
@@ -77,7 +84,7 @@ void enviar_mensagem_websocket(int client_fd, const char *mensagem) {
         frame[3] = len & 0xFF;
         frame_len = 4;
     } else {
-        printf("Mensagem grande demais para este exemplo simplificado.\n");
+//        printf("Mensagem grande demais para este exemplo simplificado.\n");
         return;
     }
 
@@ -90,7 +97,7 @@ void *websocket_write(void *arg){
     Transport *websocket = (Transport *)arg;
     char chat[1024];
     while (websocket->websocket_ative){
-        int resultado = aguardar_fd(STDERR_FILENO, time_aguardar);
+        int resultado = aguardar_fd(STDIN_FILENO, time_aguardar);
         if(resultado > 0) fgets(chat, sizeof(chat), stdin);
         else continue;
         enviar_mensagem_websocket(websocket->connection_fd, chat);
@@ -116,15 +123,11 @@ void opcodesData(Transport *websocket, int opcode){
             pthread_mutex_lock(&block);
             Enqueue(&input, mensagem, websocket->connection_fd);
             pthread_mutex_unlock(&block);
-            printf("mensagem %s\n", mensagem);
+//            printf("mensagem %s\n", mensagem);
             break;
         case 0x08:
-            printf("Navegador solicitou fechamento\n");
-            pthread_mutex_lock(&block);
-            deleteHash(&clientes_threads ,websocket->connection_fd);
-            pthread_mutex_unlock(&block);
+//            printf("Navegador solicitou fechamento\n");
             websocket->websocket_ative = 0;
-            close(websocket->connection_fd);
             break;
         case 0x09:
             playload_len = websocket->buffer[1] & 0x7F;
@@ -136,7 +139,7 @@ void opcodesData(Transport *websocket, int opcode){
 
             for(int i = 0; i < playload_len; i++) payload[i] = websocket->buffer[data_index + i] ^ mask[i % 4];
 
-            printf("\033[33m[\033[1mWS\033[0m\033[33m]\033[0m: Ping recebido, enviando Pong...\n");
+//            printf("\033[33m[\033[1mWS\033[0m\033[33m]\033[0m: Ping recebido, enviando Pong...\n");
 
             unsigned char pong_frame[130];
             pong_frame[0] = 0x8A; 
@@ -147,7 +150,7 @@ void opcodesData(Transport *websocket, int opcode){
 
             write(websocket->connection_fd, pong_frame, 2 + playload_len);
             break;
-        default:
+            default:
             printf("mensagem\n");
             break;
     }
@@ -161,21 +164,17 @@ void *websocket_read(void *arg)
         size_t bytes_lidos = read(websocket->connection_fd, websocket->buffer, sizeof(websocket->buffer) - 1);
         if(bytes_lidos <= 0)
         {
-            printf("erro na conexao\n");
-            close(websocket->connection_fd);
-            continue;
+//            printf("erro na conexao\n");
+            websocket->websocket_ative = 0;
+            break;
         }
         char *key_start = strstr(websocket->buffer,"Sec-WebSocket-Key: ");
         if(key_start == NULL)
         {
             write(websocket->connection_fd, erro404, strlen(erro404));
             printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Cliente encerrou a conexao na porta %d.\n", ws_port);
-            pthread_mutex_lock(&block);
-            deleteHash(&clientes_threads ,websocket->connection_fd);
-            pthread_mutex_unlock(&block);
-            close(websocket->connection_fd);
-            free(websocket);
-            return NULL;
+            websocket->websocket_ative = 0;
+            break;
         }
         char *resposta = string_gerada(key_start);
         write(websocket->connection_fd, resposta, strlen(resposta));
@@ -194,41 +193,29 @@ void *websocket_read(void *arg)
                 break;
             }
             if(pronto_msg < 0 && errno != EINTR){
-                printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Conexao perdida com o navegador.\n");
-                pthread_mutex_lock(&block);
-                if(flag == websocket->connection_fd) flag = -1;
-                deleteHash(&clientes_threads ,websocket->connection_fd);
-                pthread_mutex_unlock(&block);
-                close(websocket->connection_fd);
+                websocket->websocket_ative = 0;
+                break;
             }else if(pronto_msg > 0){
                 size_t bytes_lidos;
                 if((bytes_lidos = read(websocket->connection_fd, websocket->buffer, sizeof(websocket->buffer))) <= 0)
                 {
-                    printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Conexao perdida com o navegador.\n");
-                    pthread_mutex_lock(&block);
-                    if(flag == websocket->connection_fd) flag = -1;
-                    deleteHash(&clientes_threads ,websocket->connection_fd);
-                    pthread_mutex_unlock(&block);
                     websocket->websocket_ative = 0;
-                    close(websocket->connection_fd);
-                    continue;
+                    break;
                 }
                 int opcode = websocket->buffer[0] & 0x0F;
                 opcodesData(websocket, opcode);
             }
         }
-        pthread_mutex_lock(&block);
-        deleteHash(&clientes_threads ,websocket->connection_fd);
-        pthread_mutex_unlock(&block);
-        close(websocket->connection_fd);
-        free(websocket);
-        return NULL;
+        break;
     }
-    pthread_mutex_lock(&block);
-    deleteHash(&clientes_threads ,websocket->connection_fd);
-    pthread_mutex_unlock(&block);
+    if(rodando){
+        pthread_t delete_id;
+        pthread_create(&delete_id, NULL, liberaThread,  (void *)websocket);
+        pthread_detach(delete_id);
+    }
     close(websocket->connection_fd);
     free(websocket);
+    printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Conexao perdida com o navegador websocket:[%d].\n", websocket->connection_fd);
     return NULL;
 }
 
@@ -238,8 +225,8 @@ void *websocket_serve(void *arg)
     inithash(&clientes_threads);
     newQueue(&output);
     newQueue(&input);
-    printf("Iniciando Websocket\n");
-    if(websocket == NULL) exit(EXIT_FAILURE);
+    printf("Servidor Websocket Iniciado");
+    if(websocket == NULL) return NULL;
     Transport *cliente = NULL;
     printf("iniciado com sucesso esperando um conexao na porta no enderço http://localhost:%d\n", ws_port);
     while (rodando) {
@@ -253,7 +240,7 @@ void *websocket_serve(void *arg)
         memcpy(cliente, websocket, sizeof(Transport));
         cliente->client_size = sizeof(cliente->client);
 
-        cliente->connection_fd = accept(websocket->socket_fd, (struct sockaddr*)&websocket->client, &websocket->client_size);
+        cliente->connection_fd = accept(websocket->socket_fd, (struct sockaddr*)&cliente->client, &cliente->client_size);
         if(cliente->connection_fd < 0){
             free(cliente);
             continue;
@@ -261,7 +248,7 @@ void *websocket_serve(void *arg)
         memset(cliente->buffer, 0, sizeof(cliente->buffer));
         pthread_t websocket_id;
         cliente->websocket_ative = 1;
-        pthread_mutex_lock(&clientes_mutex);
+        pthread_mutex_lock(&block);
         
         if((pthread_create(&websocket_id, NULL, websocket_read, (void *)cliente)) == -1){
             close(cliente->connection_fd);
@@ -272,20 +259,16 @@ void *websocket_serve(void *arg)
             close(cliente->connection_fd);
             cliente->websocket_ative = 0;
         };
-        pthread_mutex_unlock(&clientes_mutex);
+        pthread_mutex_unlock(&block);
     }
 
-    printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Cliente encerrou a conexao na porta %d.\n", ws_port);
+    printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Servidor Encerrando... %d.\n", ws_port);
     pthread_mutex_lock(&block);
     flag = -1;
-    pthread_mutex_unlock(&block);
-
-    pthread_mutex_lock(&clientes_mutex);
-    close(websocket->socket_fd);
-    freehash(&clientes_threads);
     freeQueuen(&output);
     freeQueuen(&input);
-    pthread_mutex_unlock(&clientes_mutex);
+    close(websocket->socket_fd);
+    pthread_mutex_unlock(&block);
     return NULL;
 }
 
