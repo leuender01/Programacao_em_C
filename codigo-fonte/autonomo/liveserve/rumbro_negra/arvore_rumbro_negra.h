@@ -14,12 +14,12 @@ struct nodo{
 
 typedef struct{
     struct nodo *raiz;
-    struct nodo *Nill;
     unsigned long size;
 } RBtree;
 
 int newRBtree(RBtree *tree);
-struct nodo *newNodo(int value, struct nodo *nodeFolha);
+struct nodo *newNodo(int value);
 int insertRBtree(RBtree *tree, int value);
 int freeRB(RBtree *tree);
+int porlevel(RBtree *tree);
 #endif

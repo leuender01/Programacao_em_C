@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../Queue.h"
+#include "Queue.h"
 
 int main(void)
 {

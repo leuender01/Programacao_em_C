@@ -7,13 +7,13 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/types.h>
-#include "live_serve.h"
+#include "websocket.h"
 #include <openssl/sha.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
-#include "hash.h"
-#include "Queue.h"
+#include "hash/hash.h"
+#include "Queuen/Queue.h"
 
 const char erro404[] = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 const char resposta101[] = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ";

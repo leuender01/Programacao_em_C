@@ -2,11 +2,12 @@
 #include <stdio.h>
 #define TESTES
 #include "./libtesetes/testes.h"
-#include "../hash.h"
+#include "hash.h"
 #include <string.h>
 #include <pthread.h>
 #define SIZE 100
 
+pthread_mutex_t block = PTHREAD_MUTEX_INITIALIZER;
 void testar_numeros(void);
 unsigned int tabela_valores[SIZE] = {0};
 HASH table;

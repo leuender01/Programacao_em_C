@@ -1,7 +1,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "../live_serve.h"
+#include "Tcp.h"
 
 int main(void){
     Transport teste = Tcp("server", 8080);
