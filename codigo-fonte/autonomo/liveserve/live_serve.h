@@ -8,6 +8,7 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "Queue.h"
 
 typedef struct{
     int socket_fd, connection_fd;  
@@ -15,9 +16,8 @@ typedef struct{
     struct sockaddr_in myserve;
     struct sockaddr_in client;
     char buffer[1024];
-    union {
-        int websocket_ative;
-    };
+    int websocket_ative;
+    Queue *input;
 } Transport;             
 
 static int aguardar_fd(int fd, long timeout_usec);

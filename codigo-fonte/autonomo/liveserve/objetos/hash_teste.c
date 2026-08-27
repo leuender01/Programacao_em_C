@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#define HASH_H
 #define TESTES
 #include "./libtesetes/testes.h"
 #include "../hash.h"

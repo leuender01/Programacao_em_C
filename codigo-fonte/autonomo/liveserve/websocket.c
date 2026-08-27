@@ -12,8 +12,6 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/buffer.h>
-#define HASH_H
-#define QUEUEN_H
 #include "hash.h"
 #include "Queue.h"
 
@@ -27,12 +25,20 @@ extern pthread_mutex_t block;
 
 HASH clientes_threads;
 Queue output;
-Queue input;
 
-void *liberaThread(void *arg){
-    Transport *websocket = (Transport *)arg;
+
+struct cancel_thread{
+    int fd;
+    pthread_t fd_thread;
+};
+
+void *liberaThread(void *arg)
+{
+    struct cancel_thread *cancel = (struct cancel_thread *)arg;
     pthread_mutex_lock(&block);
-    deleteHash(&clientes_threads, websocket->connection_fd);
+    if(cancel->fd >= 0) deleteHash(&clientes_threads, cancel->fd);
+    else pthread_join(cancel->fd_thread, NULL);
+    free(cancel);
     pthread_mutex_unlock(&block);
     pthread_exit(NULL);
 }
@@ -82,7 +88,7 @@ void enviar_mensagem_websocket(int client_fd, const char *mensagem) {
         frame[1] = 126;
         frame[2] = (len >> 8) & 0xFF;
         frame[3] = len & 0xFF;
-        frame_len = 4;
+        frame_len = 4;;
     } else {
 //        printf("Mensagem grande demais para este exemplo simplificado.\n");
         return;
@@ -121,101 +127,126 @@ void opcodesData(Transport *websocket, int opcode){
             memset(mensagem, 0, sizeof(mensagem));
             for(int i = 0; i < playload_len; i++) mensagem[i] = websocket->buffer[data_index + i] ^ mask[i % 4];
             pthread_mutex_lock(&block);
-            Enqueue(&input, mensagem, websocket->connection_fd);
+            Enqueue(websocket->input, mensagem, websocket->connection_fd);
             pthread_mutex_unlock(&block);
 //            printf("mensagem %s\n", mensagem);
-            break;
-        case 0x08:
+        break;
+    case 0x08:
 //            printf("Navegador solicitou fechamento\n");
-            websocket->websocket_ative = 0;
-            break;
-        case 0x09:
-            playload_len = websocket->buffer[1] & 0x7F;
-            mask_index = 2;
-            for(int i = 0; i < 4; i++) mask[i] = websocket->buffer[mask_index + i];
-            int data_index = mask_index + 4;
-            unsigned char payload[128]; 
-            memset(payload, 0, sizeof(payload));
+        websocket->websocket_ative = 0;
+        break;
+    case 0x09:
+        playload_len = websocket->buffer[1] & 0x7F;
+        mask_index = 2;
+        for(int i = 0; i < 4; i++) mask[i] = websocket->buffer[mask_index + i];
+        int data_index = mask_index + 4;
+        unsigned char payload[128]; 
+        memset(payload, 0, sizeof(payload));
 
-            for(int i = 0; i < playload_len; i++) payload[i] = websocket->buffer[data_index + i] ^ mask[i % 4];
+        for(int i = 0; i < playload_len; i++) payload[i] = websocket->buffer[data_index + i] ^ mask[i % 4];
 
 //            printf("\033[33m[\033[1mWS\033[0m\033[33m]\033[0m: Ping recebido, enviando Pong...\n");
 
-            unsigned char pong_frame[130];
-            pong_frame[0] = 0x8A; 
-            pong_frame[1] = playload_len;                                     
-            for(int i = 0; i < playload_len; i++) {
-                pong_frame[2 + i] = payload[i];
-            }
+        unsigned char pong_frame[130];
+        pong_frame[0] = 0x8A; 
+        pong_frame[1] = playload_len;                                     
+        for(int i = 0; i < playload_len; i++) {
+            pong_frame[2 + i] = payload[i];
+        }
 
-            write(websocket->connection_fd, pong_frame, 2 + playload_len);
-            break;
-            default:
+        write(websocket->connection_fd, pong_frame, 2 + playload_len);
+        break;
+        default:
             printf("mensagem\n");
-            break;
-    }
+        break;
+}
 }
 
 void *websocket_read(void *arg)
 {
     Transport *websocket = (Transport *)arg;
+    websocket->input = NULL;
+    websocket->input = malloc(sizeof(Queue));
+    if(websocket->input == NULL){
+        websocket->websocket_ative = 0;
+    }
     while (websocket->websocket_ative) 
     {
+        newQueue(websocket->input);
         size_t bytes_lidos = read(websocket->connection_fd, websocket->buffer, sizeof(websocket->buffer) - 1);
         if(bytes_lidos <= 0)
-        {
+    {
 //            printf("erro na conexao\n");
-            websocket->websocket_ative = 0;
-            break;
-        }
-        char *key_start = strstr(websocket->buffer,"Sec-WebSocket-Key: ");
-        if(key_start == NULL)
-        {
-            write(websocket->connection_fd, erro404, strlen(erro404));
-            printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Cliente encerrou a conexao na porta %d.\n", ws_port);
-            websocket->websocket_ative = 0;
-            break;
-        }
-        char *resposta = string_gerada(key_start);
-        write(websocket->connection_fd, resposta, strlen(resposta));
-        free(resposta);
-
-        pthread_mutex_lock(&block);
-        flag = websocket->connection_fd;
-        pthread_mutex_unlock(&block);
-
-        printf("\033[32m[\033[1mWS\033[0m\033[32m]\033[0m: Conexao estabelecida com sucesso\n\n");
-        while(websocket->websocket_ative){
-            memset(websocket->buffer, 0,sizeof(websocket->buffer));
-            int pronto_msg = aguardar_fd(websocket->connection_fd, time_aguardar);
-            if(rodando == 0){ 
-                websocket->websocket_ative = 0;
-                break;
-            }
-            if(pronto_msg < 0 && errno != EINTR){
-                websocket->websocket_ative = 0;
-                break;
-            }else if(pronto_msg > 0){
-                size_t bytes_lidos;
-                if((bytes_lidos = read(websocket->connection_fd, websocket->buffer, sizeof(websocket->buffer))) <= 0)
-                {
-                    websocket->websocket_ative = 0;
-                    break;
-                }
-                int opcode = websocket->buffer[0] & 0x0F;
-                opcodesData(websocket, opcode);
-            }
-        }
+        websocket->websocket_ative = 0;
         break;
+    }
+    char *key_start = strstr(websocket->buffer,"Sec-WebSocket-Key: ");
+    if(key_start == NULL)
+    {
+        write(websocket->connection_fd, erro404, strlen(erro404));
+        printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Cliente encerrou a conexao na porta %d.\n", ws_port);
+        websocket->websocket_ative = 0;
+        break;
+    }
+    char *resposta = string_gerada(key_start);
+    write(websocket->connection_fd, resposta, strlen(resposta));
+    free(resposta);
+
+    pthread_mutex_lock(&block);
+    flag = websocket->connection_fd;
+    pthread_mutex_unlock(&block);
+
+    printf("\033[32m[\033[1mWS\033[0m\033[32m]\033[0m: Conexao estabelecida com sucesso\n\n");
+    while(websocket->websocket_ative){
+        memset(websocket->buffer, 0,sizeof(websocket->buffer));
+        int pronto_msg = aguardar_fd(websocket->connection_fd, time_aguardar);
+        if(!empytQueue(websocket->input)){
+            struct Queuedata saida = Dequeue(websocket->input);
+            printf("mensagem: [ %s ], WS[ %d ]\n", saida.strig, saida.socket_fd);
+            free(saida.strig);
+        }
+        if(rodando == 0){ 
+            websocket->websocket_ative = 0;
+            break;
+        }
+        if(pronto_msg < 0 && errno != EINTR){
+            websocket->websocket_ative = 0;
+            break;
+        }else if(pronto_msg > 0){
+            size_t bytes_lidos;
+            if((bytes_lidos = read(websocket->connection_fd, websocket->buffer, sizeof(websocket->buffer))) <= 0)
+            {
+                websocket->websocket_ative = 0;
+                break;
+            }
+            int opcode = websocket->buffer[0] & 0x0F;
+            opcodesData(websocket, opcode);
+        }
+    }
+    break;
+    }
+    if(websocket->input != NULL ) {
+        freeQueuen(websocket->input);
+        free(websocket->input);
     }
     if(rodando){
         pthread_t delete_id;
-        pthread_create(&delete_id, NULL, liberaThread,  (void *)websocket);
+        struct cancel_thread *cancel = malloc(sizeof(struct cancel_thread));
+        if(cancel == NULL) {
+            close(websocket->connection_fd);
+            free(websocket);
+            return NULL;
+        }
+        *cancel = (struct cancel_thread){0 ,0};
+        *cancel = (struct cancel_thread){websocket->connection_fd, searchHash(&clientes_threads, websocket->connection_fd)};
+        pthread_create(&delete_id, NULL, liberaThread,  (void *)cancel);
         pthread_detach(delete_id);
+        
     }
-    close(websocket->connection_fd);
-    free(websocket);
     printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Conexao perdida com o navegador websocket:[%d].\n", websocket->connection_fd);
+    close(websocket->connection_fd);
+    websocket->connection_fd = -1;
+    free(websocket);
     return NULL;
 }
 
@@ -224,7 +255,6 @@ void *websocket_serve(void *arg)
     Transport *websocket = (Transport *)arg;
     inithash(&clientes_threads);
     newQueue(&output);
-    newQueue(&input);
     printf("Servidor Websocket Iniciado");
     if(websocket == NULL) return NULL;
     Transport *cliente = NULL;
@@ -250,30 +280,33 @@ void *websocket_serve(void *arg)
         cliente->websocket_ative = 1;
         pthread_mutex_lock(&block);
         
-        if((pthread_create(&websocket_id, NULL, websocket_read, (void *)cliente)) == -1){
+        if((pthread_create(&websocket_id, NULL, websocket_read, (void *)cliente)) != 0){
             close(cliente->connection_fd);
+            cliente->connection_fd = -1;
             free(cliente);
             continue;
-        };
+        }
         if(insertHash(&clientes_threads, cliente->connection_fd, websocket_id)){
             close(cliente->connection_fd);
+            cliente->connection_fd = -1;
             cliente->websocket_ative = 0;
-        };
+        }
         pthread_mutex_unlock(&block);
     }
 
     printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Servidor Encerrando... %d.\n", ws_port);
     pthread_mutex_lock(&block);
+    freehash(&clientes_threads);
     flag = -1;
     freeQueuen(&output);
-    freeQueuen(&input);
     close(websocket->socket_fd);
+    websocket->socket_fd = -1;
     pthread_mutex_unlock(&block);
     return NULL;
-}
+    }
 
-void calcular_chave_websocket(const char *key, char *output)
-{
+    void calcular_chave_websocket(const char *key, char *output)
+    {
      char GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";     
      char buffer[256];                                         
      unsigned char sha1_result[SHA_DIGEST_LENGTH];             
@@ -297,9 +330,9 @@ void calcular_chave_websocket(const char *key, char *output)
      output[buffer_ptr->length] = '\0';                               
      BIO_free_all(bio);                                        
      BIO_free(b64);                                            
-}
+    }
 
-static int aguardar_fd(int fd, long timeout_usec){
+    static int aguardar_fd(int fd, long timeout_usec){
     fd_set readfds;
     FD_ZERO(&readfds);
     FD_SET(fd, &readfds);

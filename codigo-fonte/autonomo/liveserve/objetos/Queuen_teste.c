@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#define QUEUEN_H
 #include "../Queue.h"
 
 int main(void)

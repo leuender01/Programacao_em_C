@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#define QUEUEN_H 
 #include "Queue.h"
 
 int newQueue(Queue *p)

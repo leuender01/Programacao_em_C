@@ -1,4 +1,3 @@
-#define HASH_H
 #include "hash.h"
 #include <stdlib.h>
 #include <string.h>
@@ -80,7 +79,7 @@ int insertHashValue(HASH *table, int key, pthread_t value){
     return 0;
 }
 
-int searchHash(HASH *table, int key){
+pthread_t searchHash(HASH *table, int key){
     if(key < 0) return 1;
 //    unsigned long hash = calcularHash((char *)key);
     unsigned long hash = key % TAM_INICIAL;
@@ -98,7 +97,7 @@ int searchHash(HASH *table, int key){
     return 1;
 }
 
-int searchHashValue(HASH *table, pthread_t value){
+pthread_t searchHashValue(HASH *table, pthread_t value){
     if(value < 0) return 1;
     unsigned long hash = value % TAM_INICIAL;
     if(table->no[hash].value >= 0 && table->no[hash].value == value){

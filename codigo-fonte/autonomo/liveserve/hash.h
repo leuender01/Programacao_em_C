@@ -1,4 +1,5 @@
-#ifdef HASH_H
+#ifndef  HASH_H
+#define HASH_H
 #define TAM_INICIAL 1009
 #include <pthread.h>
 struct node{
@@ -22,8 +23,8 @@ int inithash(HASH *table);
 //unsigned long calcularHash(char *string);
 int insertHashValue(HASH *table, int key, pthread_t value);
 int insertHash(HASH *table, int key, pthread_t value);
-int searchHash(HASH *table, int key);
-int searchHashValue(HASH *table, pthread_t value);
+pthread_t searchHash(HASH *table, int key);
+pthread_t searchHashValue(HASH *table, pthread_t value);
 int deleteHash(HASH *table, int key);
 int deleteHashValue(HASH *table, pthread_t value);
 void freehash(HASH *table);

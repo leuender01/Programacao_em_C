@@ -1,4 +1,5 @@
-#ifdef QUEUEN_H
+#ifndef  QUEUEN_H
+#define QUEUEN_H
 
 struct Queuedata {
     int socket_fd;
