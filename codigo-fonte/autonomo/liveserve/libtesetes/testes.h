@@ -1,6 +1,7 @@
-#ifdef TESTES
+#ifndef TESTES
+#define TESTES
 
 char *gerarStringAletaria(void);
-unsigned int numerosAletaorios(void);
+int numerosAletaorios(int seed);
 
 #endif

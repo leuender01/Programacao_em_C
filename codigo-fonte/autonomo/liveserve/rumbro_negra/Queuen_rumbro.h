@@ -1,8 +1,9 @@
 #ifndef QUEUE_H
 #define QUEUE_H
+#include "arvore_rumbro_negra.h"
 
 struct queuenRB{
-    int fd;
+    struct nodo fd;
     struct queuenRB *prox;
 };
 
@@ -12,10 +13,11 @@ typedef struct {
     unsigned long size;
 } QueuenRB;
 
-int newQueue(QueuenRB *p); 
-int empytQueue(QueuenRB *p); 
-int Enqueue(QueuenRB *p, int value); 
-int Dequeue(QueuenRB *p); 
-int peekQueue(QueuenRB *p); 
+int newQueueRB(QueuenRB *p); 
+int empytQueueRB(QueuenRB *p); 
+int EnqueueRB(QueuenRB *p, struct nodo* value);
+struct nodo DequeueRB(QueuenRB *p);
+struct nodo peekQueueRB(QueuenRB *p);
+int freeQueuenRB(QueuenRB *p);
 
 #endif

@@ -16,7 +16,7 @@ char* gerarStringAletaria(void){
     return resultado;
 }
 
-unsigned int numerosAletaorios(void){
-    unsigned int resultado = (rand() % 100) + 1;
+int numerosAletaorios(int seed){
+    int resultado = (rand() % seed) + 1;
     return resultado;
 }

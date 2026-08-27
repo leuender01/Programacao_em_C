@@ -62,9 +62,10 @@ int freeQueuen(Queue *p)
 {
     struct Queuedata *temp = p->first;
     while (temp != NULL) {
+        struct Queuedata *aux = temp->prox;
         free(temp->strig);
         free(temp);
-        temp = temp->prox;
+        temp = aux;
     }
     *p = (Queue){NULL, NULL, 0};
     return 0;    
