@@ -12,8 +12,8 @@ Rumbro_negra: arvore_rumbro_negra.c
 	gcc -g -c arvore_rumbro_negra.c
 
 Rumbro_negra_teste: Rumbro_negra arvore_rumbro_negra_teste.c Queue teste
-	gcc -g arvore_rumbro_negra.o Queuen_rumbro.o arvore_rumbro_negra_teste.c gerar_strings_aleatorias.o -o bin/arvore_rumbro_negra
-	valgrind --leak-check=full bin/arvore_rumbro_negra
+	gcc -g arvore_rumbro_negra.o Queuen_rumbro.o arvore_rumbro_negra_teste.c gerar_strings_aleatorias.o -o bin/arvore_rumbro_negra_teste
+	valgrind --leak-check=full bin/arvore_rumbro_negra_teste
 
 bin/:
 	mkdir bin
