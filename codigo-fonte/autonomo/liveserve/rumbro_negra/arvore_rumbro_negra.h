@@ -1,5 +1,6 @@
 #ifndef ARVORE_RUMBRO
 #define ARVORE_RUMBRO
+
 typedef  enum {
     BLACK,
     RUMBRO

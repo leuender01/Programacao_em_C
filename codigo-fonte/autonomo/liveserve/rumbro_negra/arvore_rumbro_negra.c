@@ -1,4 +1,6 @@
+#include <stdio.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include "arvore_rumbro_negra.h"
 #include "Queuen_rumbro.h"
 
@@ -8,121 +10,51 @@ int newRBtree(RBtree *tree){
     return 0;
 }
 
-/*
-    ## Regras:
-    - Todo no e rumbro ou negrod
-    - a raiz e sempre negra
-    - todo no nulo e negro
-    - o pai de um no rumbro e sempre negro
-    - Qualquer caminho de um no ate um no nulo tem o mesmo numero de nos negros
-    - cada novo no inserido e RUMBRO
-    - insercao e igual a um ABB
-    - Apos a insercao ver se as propridades da rumbro negra se mantem
-    - Se o pai do novo no for negro todas as propridades se mantem
-    - Se o pai do novo no for rumbro rotações alterações precisam se feitas
+struct nodo *grandpa(struct nodo *no)
+{
+    if((no != NULL) && ( no->dad != NULL)) return no->dad->dad;
+    return NULL;
+}
 
-    ## Caso 1
-    ### Seo pai e o tio do novo no sao Rumbros 
-    - Pai e tio ficam negros
-    - Avo fica Rumbro
-    ### Se o pai do avo for Rumbro, inicia novamente o processo de verificacao das cores
+struct nodo *uncle(struct nodo *no)
+{
+    struct nodo *aux = grandpa(no);
+    if(aux == NULL) return NULL;
+    if(no->dad == aux->left) return aux->right;
+    return aux->left;
+}
 
-    ```OBS
-        atualize o novo no para o avô
-    ```
-    - O pai e o tio ficam Negros
-    - Vo dica Rubro
-    - novo no = avô
-
-    ## Caso 2
-    ### O pai e rubro e o tio e negro
-    
-    #### __Rotaçao Simples__direita
-    ----Pai do novo no e filho esquerdo e o novo no e filho esquerdo-----
-    - Pai fica negro 
-    - Avo fica Rubro
-    - Rotaciona o avo para direita
-
-    ### __Rotaçao Dupla__direira_esquerda
-    ----Pai do novo no e filho esquerdo e o novo no e filho direito-----
-    - Rotaciona Pai para a esquerda
-    - o novo no = filho esquerdo do novo no
-    - Pai fica negro
-    - Avo fica Rubro e Rotaciona o avo para a direita
-
- */
 void RDD(struct nodo *no)
 {
-    struct nodo *swap = no->left;
-    no->right = NULL;
-    swap->right = no;
-    no  = swap;
-    
 }
 
 void RDS(struct nodo *no)
 {
-    struct nodo *swap = no->right;
-    no->left = NULL;
-    swap->left = no;
-    no  = swap;
 }
 
-void isBalance(struct nodo *no)
-{
-    struct nodo *atualNo = no;
-    while (atualNo->color == RUMBRO && atualNo->dad != NULL && atualNo->dad->color == RUMBRO) {
-        struct nodo *grandp = atualNo->dad->dad;
-        struct nodo *dad = atualNo->dad;
-        if(grandp->left == atualNo)
-        {
-            struct nodo *uncle = grandp->right;
-            if(uncle != NULL && uncle->color == RUMBRO)
-            {
-                uncle->color = BLACK; 
-                dad->color =  uncle->color;
-                grandp->color = RUMBRO;
-                atualNo = grandp;
-            }else{
-                if(grandp->right == dad)
-                {
-                    RDS(dad);
-                }
-                RDD(grandp);
-                grandp->color = RUMBRO;
-                atualNo->dad->color = BLACK;
-                atualNo = atualNo->dad;
 
-            }
+void isBalance(struct nodo *raiz, struct nodo *no)
+{
+    struct nodo *temp = no;
+    while(temp->dad != NULL && temp->dad->color == RUMBRO)
+    {
+        struct nodo *grandp = grandpa(temp);
+        struct nodo *u = uncle(temp);
+        if(u != NULL && u->color == RUMBRO){
+            printf("filho: %d , pai: %d\n", no->fd, no->dad->fd);
         
         }else{
-            struct nodo *uncle = grandp->left;
-            if(uncle != NULL && uncle->color == RUMBRO)
-            {
-                uncle->color = BLACK; 
-                dad->color =  uncle->color;
-                grandp->color = RUMBRO;
-                atualNo = grandp;
-            }else{
-                if(grandp->left == dad)
-                {
-                    RDD(dad);
-                }
-                RDS(grandp);
-                grandp->color = RUMBRO;
-                atualNo->dad->color = BLACK;
-                atualNo = atualNo->dad;
-            }
+            printf("tio e preto\n");
         }
-    
+        temp = grandp; 
     }
-    no->color = BLACK;
+    raiz->color = BLACK;
 }
 
-struct nodo *newNodo(int value, struct nodo *dad, COLOR cor){
+struct nodo *newNodo(int value){
     struct nodo *newno = NULL;
     newno = malloc(sizeof(struct nodo));
-    if(newno != NULL) *newno = (struct nodo){.color=cor, .fd=value, .left=NULL, .right=NULL, .dad=dad};
+    if(newno != NULL) *newno = (struct nodo){.color=RUMBRO, .fd=value, .left=NULL, .right=NULL, .dad=NULL};
     return newno;
  }
 
@@ -137,34 +69,40 @@ struct nodo *__binarySearch(struct nodo *aux,int value)
     return NULL;
 }
 
-struct nodo *__insertRB(struct nodo *temp, int value, RBtree *tree, struct nodo *dad, COLOR cor){
-    if(temp != NULL && temp->fd == value) return temp;
-    if(temp == NULL){
-        temp = newNodo(value, dad, cor);
-        isBalance(temp);
-        tree->size++;
-    }else if(value > temp->fd){
-        temp->right = __insertRB(temp->right, value, tree, temp, RUMBRO);
-        isBalance(temp);
-    }else{
-        temp->left = __insertRB(temp->left, value, tree, temp, RUMBRO);
-        isBalance(temp);
-    }
-    return temp;
-}
-
 int insertRBtree(RBtree *tree, int value){
     if(tree == NULL) return 1;
+    struct nodo *newno = newNodo(value);
+    if(newno == NULL) return 1;
     struct nodo *temp = tree->raiz;
-    if(temp == NULL){
-        temp = newNodo(value, NULL, BLACK);
-        if(temp == NULL) return 1;
-        tree->raiz = temp;
-        tree->size++;
-        return 0;
+    struct nodo *dad = NULL;
+    int old = tree->size;
+    while( temp != NULL)
+    {
+        if(newno->fd ==  temp->fd){
+            free(newno);
+            return 1;
+        }
+        dad = temp;
+        if(newno->fd < temp->fd)
+        {
+            temp = temp->left;
+            newno->dad = dad;
+            continue;
+        }
+        temp = temp->right;
+        newno->dad = dad;
     }
-    unsigned long old = tree->size;
-    tree->raiz = __insertRB(temp, value, tree, NULL, RUMBRO);
+    tree->size++;
+    if(dad == NULL)
+    {
+        tree->raiz = newno;
+    }else if(newno->fd < dad->fd)
+    {
+        dad->left = newno;
+    }else{
+        dad->right = newno;
+    }
+    isBalance(tree->raiz, newno);
     return (old == tree->size);
 }
 
