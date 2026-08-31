@@ -26,5 +26,5 @@ int* preorder(RBtree *tree);
 int binarySearch(RBtree *tree, int value);
 int maxValue(RBtree *tree);
 int minValue(RBtree *tree);
-
+int removeRbtree(RBtree *tree, int value);
 #endif

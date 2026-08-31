@@ -10,7 +10,7 @@ int main(void){
     QueuenRB fila;
     newQueueRB(&fila);
     for(int i = 0; i < SIZE_; i++){
-        valuesteste[i] = (struct nodo){.fd = numerosAletaorios(), .color=BLACK, .left=NULL, .right=NULL};
+        valuesteste[i] = (struct nodo){.fd = numerosAletaorios(100), .color=BLACK, .left=NULL, .right=NULL};
         EnqueueRB(&fila, &valuesteste[i]);
     }
     printf("%d : %d\n", peekQueueRB(&fila).fd, valuesteste[0].fd);

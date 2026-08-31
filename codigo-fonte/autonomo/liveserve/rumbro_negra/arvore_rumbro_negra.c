@@ -1,4 +1,4 @@
-#include <stdio.h>
+//#include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include "arvore_rumbro_negra.h"
@@ -24,31 +24,146 @@ struct nodo *uncle(struct nodo *no)
     return aux->left;
 }
 
-void RDD(struct nodo *no)
+void RDD(RBtree *raiz , struct nodo *no)
 {
+    /*
+        y = x.left
+        x.left = y.right
+        if y.right != self.NIL:
+            y.right.parent = x
+        y.parent = x.parent
+        if x.parent is None:
+            self.root = y
+        elif x == x.parent.right:
+            x.parent.right = y
+        else:
+            x.parent.left = y
+        y.right = x
+        x.parent = y
+        */
+    if (no == NULL || no->left == NULL) return;
+//    puts("Rotacionar para direita\n");
+//    if(no != NULL ) printf("no atual %d , pai: %d\n",(no != NULL) ?  no->fd : -1, (no->dad != NULL) ?  no->dad->fd : -1);
+    struct nodo *swap = no->left;
+    no->left = swap->right;
+
+    if (swap->right != NULL) swap->right->dad = no;
+    swap->dad = no->dad;
+    if (no->dad == NULL) raiz->raiz = swap; 
+    else if (no == no->dad->right) no->dad->right = swap;
+    else no->dad->left = swap;
+
+    swap->right = no;
+    no->dad = swap;
 }
 
-void RDS(struct nodo *no)
+void RDS(RBtree *raiz , struct nodo *no)
 {
+    /*
+         y = x.right
+        x.right = y.left
+        if y.left != self.NIL:
+            y.left.parent = x
+        y.parent = x.parent
+        if x.parent is None:
+            self.root = y
+        elif x == x.parent.left:
+            x.parent.left = y
+        else:
+            x.parent.right = y
+        y.left = x
+        x.parent = y
+    */
+    if (no == NULL || no->right == NULL) return;
+//    puts("Rotacionar para esquerda\n");
+//    if(no != NULL ) printf("no atual %d , pai: %d\n",(no != NULL) ?  no->fd : -1, (no->dad != NULL) ?  no->dad->fd : -1);
+    struct nodo *swap = no->right;
+    no->right = swap->left;
+    if(swap->left != NULL) swap->left->dad = no;
+    swap->dad = no->dad;
+    if(no->dad == NULL) raiz->raiz = swap;
+    else if( no == no->dad->left) no->dad->left = swap;
+    else no->dad->right = swap;
+    swap->left = no;
+    no->dad = swap;
 }
 
 
-void isBalance(struct nodo *raiz, struct nodo *no)
+void isBalance(RBtree *raiz, struct nodo *no)
 {
     struct nodo *temp = no;
     while(temp->dad != NULL && temp->dad->color == RUMBRO)
     {
         struct nodo *grandp = grandpa(temp);
-        struct nodo *u = uncle(temp);
-        if(u != NULL && u->color == RUMBRO){
-            printf("filho: %d , pai: %d\n", no->fd, no->dad->fd);
-        
-        }else{
-            printf("tio e preto\n");
+        struct nodo *dad = temp->dad;
+        if(grandp != NULL && grandp->right == dad)
+        {
+//            puts("O pai e filho direito");
+            struct nodo *u = uncle(temp);
+            if(u != NULL && u->color == RUMBRO) 
+            {
+                u->color = BLACK;
+                dad->color = BLACK;
+                grandp->color = RUMBRO;
+                temp = grandp;
+            }else {
+//                puts("Precisa de rotaco ");
+                if(dad->left == temp)
+                {
+//                    printf("noAtual e filho esquerdo no atual: %d, pai: %d\n", temp->fd, dad->fd);
+                    temp = dad;
+                    RDD(raiz, temp);
+                    dad = temp->dad;
+                    grandp = grandpa(temp);
+                }
+                dad->color = BLACK;
+                grandp->color = RUMBRO;
+                RDS(raiz, grandp);
+            }
+            /*
+            if(dad != NULL && dad->left == temp)
+            {
+                puts("no atual e filho esquerdo");
+            }else if(dad != NULL && dad->right == temp){
+                puts("no atual e filho direito");
+            }
+            */
+        }else if(grandp != NULL){
+//            puts("O pai e filho esquerdo");
+            struct nodo *u = uncle(temp);
+            if(u != NULL &&  u->color == RUMBRO) 
+            {
+                u->color = BLACK;
+                dad->color = BLACK;
+                grandp->color = RUMBRO;
+                temp = grandp;
+            }else {
+//                puts("Precisa de rotaco ");
+                if( dad->right == temp)
+                {
+//                    puts("noAtual e filho direito");
+                    temp = dad;
+                    RDS(raiz, temp);
+                    dad = temp->dad;
+                    grandp = grandpa(temp);
+                }
+                dad->color = BLACK;
+                grandp->color = RUMBRO;
+                RDD(raiz, grandp);
+            }
+            /*
+            if(dad != NULL && dad->left == temp)
+            {
+                puts("no atual e filho esquerdo");
+                RDD(no->dad);
+            }else if(dad != NULL && dad->right == temp){
+                puts("no atual e filho direito");
+            }
+            */
         }
-        temp = grandp; 
+        if(temp == raiz->raiz) break;
     }
-    raiz->color = BLACK;
+    raiz->raiz->color = BLACK;
 }
 
 struct nodo *newNodo(int value){
@@ -102,7 +217,7 @@ int insertRBtree(RBtree *tree, int value){
     }else{
         dad->right = newno;
     }
-    isBalance(tree->raiz, newno);
+    isBalance(tree, newno);
     return (old == tree->size);
 }
 
@@ -213,4 +328,53 @@ int minValue(RBtree *tree)
         else break;
     }
     return aux->fd;
+}
+
+struct nodo *_minValue(struct nodo *tree)
+{
+    if(tree == NULL) return NULL;
+    struct nodo *aux = tree;
+    if(aux == NULL) return NULL;
+    while (aux != NULL) {
+        if(aux->left != NULL) aux = aux->left;
+        else break;
+    }
+    return aux;
+}
+
+struct nodo *_remove(RBtree *raiz, struct nodo *no, int value)
+{
+    if(no == NULL) return NULL;
+    if(value < no->fd)
+    {
+        no->left = _remove(raiz, no->left, value);
+        if(no->left != NULL) no->left->dad = no;
+    }else if(value > no->fd)
+    {
+        no->right = _remove(raiz, no->right, value);
+        if(no->right != NULL) no->right->dad = no;
+    }else{
+        if(no->left == NULL || no->right == NULL)
+        {
+            struct nodo *filho = (no->left != NULL) ? no->left : no->right;  
+            if(filho != NULL) filho->dad = no->dad;
+            free(no);
+            raiz->size--;
+            return filho;
+        }else{
+            struct nodo *aux = _minValue(no->right);
+            no->fd = aux->fd;
+            no->right = _remove(raiz, no->right, aux->fd);
+            if(no->right != NULL) no->right->dad = no;
+        }
+    }
+    return no;
+}
+
+ int removeRbtree(RBtree *tree, int value)
+{
+    if(tree->raiz == NULL) return 0;
+    int old = tree->size;
+    tree->raiz = _remove(tree, tree->raiz, value);
+    return (old != tree->size);
 }
