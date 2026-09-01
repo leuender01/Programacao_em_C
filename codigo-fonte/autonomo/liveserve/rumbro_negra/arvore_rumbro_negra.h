@@ -8,7 +8,8 @@ typedef  enum {
 
 struct nodo{
     COLOR color;
-    int fd;
+    int key;
+    void *info;
     struct nodo *left, *right, *dad;
 };
 
@@ -18,13 +19,13 @@ typedef struct{
 } RBtree;
 
 int newRBtree(RBtree *tree);
-int insertRBtree(RBtree *tree, int value);
+int insertRBtree(RBtree *tree, int key, void *info);
 int freeRB(RBtree *tree);
 int* porlevel(RBtree *tree);
 int* inorder(RBtree *tree);
 int* preorder(RBtree *tree);
-int binarySearch(RBtree *tree, int value);
+void* binarySearch(RBtree *tree, int key);
 int maxValue(RBtree *tree);
 int minValue(RBtree *tree);
-int removeRbtree(RBtree *tree, int value);
+int removeRbtree(RBtree *tree, int key);
 #endif

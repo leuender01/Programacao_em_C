@@ -36,7 +36,7 @@ int EnqueueRB(QueuenRB *p, struct nodo* value)
 
 struct nodo DequeueRB(QueuenRB *p)
 {
-    if(p == NULL || empytQueueRB(p)) return (struct nodo){.color=BLACK, .fd=-1, .left=NULL, .right=NULL};
+    if(p == NULL || empytQueueRB(p)) return (struct nodo){.color=BLACK, .key=-1, .left=NULL, .right=NULL};
     struct nodo result = p->first->fd;
     struct queuenRB  *freeno = p->first;
     p->first = p->first->prox;
@@ -60,6 +60,6 @@ int freeQueuenRB(QueuenRB *p)
 
 struct nodo peekQueueRB(QueuenRB *p)
 {
-    if(p->first == NULL) return (struct nodo){.color=BLACK, .fd=-1, .left=NULL, .right=NULL};
+    if(p->first == NULL) return (struct nodo){.color=BLACK, .key=-1, .left=NULL, .right=NULL};
     return p->first->fd;
 }

@@ -43,7 +43,7 @@ void RDD(RBtree *raiz , struct nodo *no)
         */
     if (no == NULL || no->left == NULL) return;
 //    puts("Rotacionar para direita\n");
-//    if(no != NULL ) printf("no atual %d , pai: %d\n",(no != NULL) ?  no->fd : -1, (no->dad != NULL) ?  no->dad->fd : -1);
+//    if(no != NULL ) printf("no atual %d , pai: %d\n",(no != NULL) ?  no->key : -1, (no->dad != NULL) ?  no->dad->key : -1);
     struct nodo *swap = no->left;
     no->left = swap->right;
 
@@ -76,7 +76,7 @@ void RDS(RBtree *raiz , struct nodo *no)
     */
     if (no == NULL || no->right == NULL) return;
 //    puts("Rotacionar para esquerda\n");
-//    if(no != NULL ) printf("no atual %d , pai: %d\n",(no != NULL) ?  no->fd : -1, (no->dad != NULL) ?  no->dad->fd : -1);
+//    if(no != NULL ) printf("no atual %d , pai: %d\n",(no != NULL) ?  no->key : -1, (no->dad != NULL) ?  no->dad->key : -1);
     struct nodo *swap = no->right;
     no->right = swap->left;
     if(swap->left != NULL) swap->left->dad = no;
@@ -110,7 +110,7 @@ void isBalance(RBtree *raiz, struct nodo *no)
 //                puts("Precisa de rotaco ");
                 if(dad->left == temp)
                 {
-//                    printf("noAtual e filho esquerdo no atual: %d, pai: %d\n", temp->fd, dad->fd);
+//                    printf("noAtual e filho esquerdo no atual: %d, pai: %d\n", temp->key, dad->key);
                     temp = dad;
                     RDD(raiz, temp);
                     dad = temp->dad;
@@ -169,7 +169,7 @@ void isBalance(RBtree *raiz, struct nodo *no)
 struct nodo *newNodo(int value){
     struct nodo *newno = NULL;
     newno = malloc(sizeof(struct nodo));
-    if(newno != NULL) *newno = (struct nodo){.color=RUMBRO, .fd=value, .left=NULL, .right=NULL, .dad=NULL};
+    if(newno != NULL) *newno = (struct nodo){.color=RUMBRO, .key=value, .left=NULL, .right=NULL, .dad=NULL, .info=NULL};
     return newno;
  }
 
@@ -177,28 +177,28 @@ struct nodo *__binarySearch(struct nodo *aux,int value)
 {
     if(aux == NULL) return NULL;
     while (aux != NULL) {
-        if(aux->fd == value) return aux;
-        if(value > aux->fd) aux = aux->right;
+        if(aux->key == value) return aux;
+        if(value > aux->key) aux = aux->right;
         else aux = aux->left;
     }
     return NULL;
 }
 
-int insertRBtree(RBtree *tree, int value){
+int insertRBtree(RBtree *tree, int key, void *info){
     if(tree == NULL) return 1;
-    struct nodo *newno = newNodo(value);
+    struct nodo *newno = newNodo(key);
     if(newno == NULL) return 1;
     struct nodo *temp = tree->raiz;
     struct nodo *dad = NULL;
     int old = tree->size;
     while( temp != NULL)
     {
-        if(newno->fd ==  temp->fd){
+        if(newno->key ==  temp->key){
             free(newno);
             return 1;
         }
         dad = temp;
-        if(newno->fd < temp->fd)
+        if(newno->key < temp->key)
         {
             temp = temp->left;
             newno->dad = dad;
@@ -211,7 +211,7 @@ int insertRBtree(RBtree *tree, int value){
     if(dad == NULL)
     {
         tree->raiz = newno;
-    }else if(newno->fd < dad->fd)
+    }else if(newno->key < dad->key)
     {
         dad->left = newno;
     }else{
@@ -233,8 +233,8 @@ int* porlevel(RBtree *tree){
         struct nodo aux = DequeueRB(&fila);
         if(aux.left != NULL) EnqueueRB(&fila, aux.left);
         if(aux.right != NULL) EnqueueRB(&fila, aux.right);
-        if(aux.fd > 0){
-            resultado[i] = aux.fd;
+        if(aux.key > 0){
+            resultado[i] = aux.key;
             i++;
         } 
     }
@@ -261,7 +261,7 @@ void _inorder(struct  nodo *no, int *i, int *resultado)
 {
     if(no == NULL) return;
     if(no->left != NULL) _inorder(no->left, i, resultado);
-    resultado[*i] = no->fd;
+    resultado[*i] = no->key;
     *i = *i + 1;
     if(no->right != NULL) _inorder(no->right, i, resultado);
     return;
@@ -280,7 +280,7 @@ int* inorder(RBtree *tree)
 void __preorder(struct nodo *no, int *i, int *resultado)
 {
     if(no == NULL) return;
-    resultado[*i] = no->fd;
+    resultado[*i] = no->key;
     *i = *i + 1;
     if(no->left != NULL) __preorder(no->left, i, resultado);
     if(no->right != NULL) __preorder(no->right, i, resultado);
@@ -297,12 +297,12 @@ int* preorder(RBtree *tree)
     return resultado;
 }
 
-int binarySearch(RBtree *tree, int value)
+void *binarySearch(RBtree *tree, int key)
 {
-    if(value < 0) return -1;
-    struct nodo *aux = __binarySearch(tree->raiz, value);
-    if(aux == NULL) return -1;
-    return aux->fd;
+    if(key < 0) return NULL;
+    struct nodo *aux = __binarySearch(tree->raiz, key);
+    if(aux == NULL) return NULL;
+    return aux->info;
     
 }
 
@@ -315,7 +315,7 @@ int maxValue(RBtree *tree)
         if(aux->right != NULL) aux = aux->right;
         else break;
     }
-    return aux->fd;
+    return aux->key;
 }
 
 int minValue(RBtree *tree)
@@ -327,7 +327,7 @@ int minValue(RBtree *tree)
         if(aux->left != NULL) aux = aux->left;
         else break;
     }
-    return aux->fd;
+    return aux->key;
 }
 
 struct nodo *_minValue(struct nodo *tree)
@@ -342,39 +342,179 @@ struct nodo *_minValue(struct nodo *tree)
     return aux;
 }
 
-struct nodo *_remove(RBtree *raiz, struct nodo *no, int value)
+static struct nodo NIL_NODE = {.color = BLACK, .key = -1, .info = NULL, .left = NULL, .right = NULL, .dad = NULL};
+#define NIL (&NIL_NODE)
+
+static COLOR colorOf(struct nodo *n)
 {
-    if(no == NULL) return NULL;
-    if(value < no->fd)
-    {
-        no->left = _remove(raiz, no->left, value);
-        if(no->left != NULL) no->left->dad = no;
-    }else if(value > no->fd)
-    {
-        no->right = _remove(raiz, no->right, value);
-        if(no->right != NULL) no->right->dad = no;
-    }else{
-        if(no->left == NULL || no->right == NULL)
-        {
-            struct nodo *filho = (no->left != NULL) ? no->left : no->right;  
-            if(filho != NULL) filho->dad = no->dad;
-            free(no);
-            raiz->size--;
-            return filho;
-        }else{
-            struct nodo *aux = _minValue(no->right);
-            no->fd = aux->fd;
-            no->right = _remove(raiz, no->right, aux->fd);
-            if(no->right != NULL) no->right->dad = no;
-        }
-    }
-    return no;
+    return (n == NULL) ? BLACK : n->color;
 }
 
- int removeRbtree(RBtree *tree, int value)
+void remove_fixup(RBtree *arv, struct nodo *x)
+{
+    while (x != arv->raiz && colorOf(x) == BLACK) {
+        struct nodo *dad = x->dad;
+        if (x == dad->left) {
+            struct nodo *brother = dad->right;
+ 
+            if (colorOf(brother) == RUMBRO) {
+                brother->color = BLACK;
+                dad->color = RUMBRO;
+                RDS(arv, dad);
+                brother = dad->right;
+            }
+ 
+            if (colorOf(brother->left) == BLACK && colorOf(brother->right) == BLACK) {
+                brother->color = RUMBRO;
+                x = dad;
+            } else {
+                if (colorOf(brother->right) == BLACK) {
+                    if (brother->left != NULL) brother->left->color = BLACK;
+                    brother->color = RUMBRO;
+                    RDD(arv, brother);
+                    brother = dad->right;
+                }
+                brother->color = dad->color;
+                dad->color = BLACK;
+                if (brother->right != NULL) brother->right->color = BLACK;
+                RDS(arv, dad);
+                x = arv->raiz;
+            }
+        } else {
+            struct nodo *brother = dad->left;
+ 
+            if (colorOf(brother) == RUMBRO) {
+                brother->color = BLACK;
+                dad->color = RUMBRO;
+                RDD(arv, dad);
+                brother = dad->left;
+            }
+ 
+            if (colorOf(brother->right) == BLACK && colorOf(brother->left) == BLACK) {
+                brother->color = RUMBRO;
+                x = dad;
+            } else {
+                if (colorOf(brother->left) == BLACK) {
+                    if (brother->right != NULL) brother->right->color = BLACK;
+                    brother->color = RUMBRO;
+                    RDS(arv, brother);
+                    brother = dad->left;
+                }
+                brother->color = dad->color;
+                dad->color = BLACK;
+                if (brother->left != NULL) brother->left->color = BLACK;
+                RDD(arv, dad);
+                x = arv->raiz;
+            }
+        }
+    }
+    x->color = BLACK;
+}
+void _remove(RBtree *raiz, struct nodo *no, int key)
+{
+    struct nodo *temp = no;
+    while (temp != NULL) {
+        if(key == temp->key) break;
+        else if(key < temp->key) temp = temp->left;
+        else temp = temp->right;
+        
+    }
+    if(temp == NULL) return;
+    if(temp->left != NULL && temp->right != NULL)
+    {
+        struct nodo *sucessor = _minValue(temp->right);
+//        printf("Caso de dois filhos\n");
+//        printf("no: a ser removido: %d  left: %d right: %d pai: %d\n", temp->key, (temp->left != NULL)  ? temp->left->key : -1, (temp->right != NULL) ? temp->right->key : -1, (temp->dad != NULL) ? temp->dad->key : -1 );
+//        printf("no a ser substuido %d\n", sucessor->key);
+        temp->key = sucessor->key;
+        temp->info = sucessor->info;
+        temp = sucessor;
+    }
+    COLOR oldcolor = temp->color;
+    struct nodo *filho = (temp->left != NULL) ?  temp->left : temp->right;
+    int userNil=  0;
+    if(filho == NULL)
+    {
+//        printf("Caso com um filho ou sem filhos\n");
+//        printf("no: a ser removido: %d  left: %d right: %d\n", temp->key, (temp->left != NULL)  ? temp->left->key : -1, (temp->right != NULL) ? temp->right->key : -1 );
+        filho = NIL;
+        userNil = 1;
+    }
+
+    filho->dad = temp->dad;
+    
+    if (temp->dad == NULL) {
+        raiz->raiz = filho;
+    } else if (temp == temp->dad->left) {
+        temp->dad->left = filho;
+    } else {
+        temp->dad->right = filho;
+    }
+    
+    if(oldcolor == BLACK)
+    {
+        remove_fixup(raiz, filho);
+    }
+
+    if(userNil){
+         if (filho->dad == NULL) {
+            raiz->raiz = NULL;
+        } else if (filho->dad->left == filho) {
+            filho->dad->left = NULL;
+        } else if (filho->dad->right == filho) {
+            filho->dad->right = NULL;
+        }
+
+        NIL->dad = NULL;
+        NIL->left = NULL;
+        NIL->right = NULL;
+        NIL->color = BLACK;
+    }
+    free(temp);
+    raiz->size--;
+    /*
+    if(temp->left == NULL || temp->right == NULL)
+    {
+        printf("Caso com um filho ou sem filhos\n");
+        printf("no: a ser removido: %d  left: %d right: %d\n", temp->key, (temp->left != NULL)  ? temp->left->key : -1, (temp->right != NULL) ? temp->right->key : -1 );
+        struct nodo *filho = (temp->left != NULL) ?  temp->left : temp->right;
+        struct nodo *dad = temp->dad;
+        if(dad == no)
+        {
+            filho->left = no->left;
+            filho->right = no->right;
+            raiz->raiz = filho;
+        }else{
+            if(dad->left == temp)
+            {
+                dad->left = NULL;
+            }else {
+                dad->right = NULL;
+            }
+        }
+        free(temp);
+        raiz->size--;
+    }else{
+        struct nodo *menor_right = _minValue(no->right);
+        printf("Caso de dois filhos\n");
+        printf("no: a ser removido: %d  left: %d right: %d pai: %d\n", temp->key, (temp->left != NULL)  ? temp->left->key : -1, (temp->right != NULL) ? temp->right->key : -1, (temp->dad != NULL) ? temp->dad->key : -1 );
+        printf("no a ser substuido %d\n", menor_right->key);
+        
+        menor_right->left  = temp->left;
+        menor_right->right = temp->right;
+        struct nodo *dad = temp->dad;
+        if(dad != NULL && dad->left == temp) dad->left = NULL;
+        else if(dad != NULL && dad->right == temp) dad->right = NULL;
+        free(temp);
+        raiz->size--;
+    }
+    */
+}
+
+ int removeRbtree(RBtree *tree, int key)
 {
     if(tree->raiz == NULL) return 0;
     int old = tree->size;
-    tree->raiz = _remove(tree, tree->raiz, value);
+    _remove(tree, tree->raiz, key);
     return (old != tree->size);
 }
