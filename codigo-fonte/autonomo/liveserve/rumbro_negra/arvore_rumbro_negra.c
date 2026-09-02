@@ -9,13 +9,13 @@ int newRBtree(RBtree *tree){
     return 0;
 }
 
-struct nodo *grandpa(struct nodo *no)
+static struct nodo *grandpa(struct nodo *no)
 {
     if((no != NULL) && ( no->dad != NULL)) return no->dad->dad;
     return NULL;
 }
 
-struct nodo *uncle(struct nodo *no)
+static struct nodo *uncle(struct nodo *no)
 {
     struct nodo *aux = grandpa(no);
     if(aux == NULL) return NULL;
@@ -23,7 +23,7 @@ struct nodo *uncle(struct nodo *no)
     return aux->left;
 }
 
-void RDD(RBtree *raiz , struct nodo *no)
+static void RDD(RBtree *raiz , struct nodo *no)
 {
     if (no == NULL || no->left == NULL) return;
     struct nodo *swap = no->left;
@@ -39,7 +39,7 @@ void RDD(RBtree *raiz , struct nodo *no)
     no->dad = swap;
 }
 
-void RDS(RBtree *raiz , struct nodo *no)
+static void RDS(RBtree *raiz , struct nodo *no)
 {
     if (no == NULL || no->right == NULL) return;
     struct nodo *swap = no->right;
@@ -54,7 +54,7 @@ void RDS(RBtree *raiz , struct nodo *no)
 }
 
 
-void isBalance(RBtree *raiz, struct nodo *no)
+static void isBalance(RBtree *raiz, struct nodo *no)
 {
     struct nodo *temp = no;
     while(temp->dad != NULL && temp->dad->color == RUMBRO)
@@ -108,14 +108,14 @@ void isBalance(RBtree *raiz, struct nodo *no)
     raiz->raiz->color = BLACK;
 }
 
-struct nodo *newNodo(int value, void *info){
+static struct nodo *newNodo(int value, void *info){
     struct nodo *newno = NULL;
     newno = malloc(sizeof(struct nodo));
     if(newno != NULL) *newno = (struct nodo){.color=RUMBRO, .key=value, .left=NULL, .right=NULL, .dad=NULL, .info=info};
     return newno;
  }
 
-struct nodo *__binarySearch(struct nodo *aux,int value)
+static struct nodo *__binarySearch(struct nodo *aux,int value)
 {
     if(aux == NULL) return NULL;
     while (aux != NULL) {
@@ -136,6 +136,7 @@ int insertRBtree(RBtree *tree, int key, void *info){
     while( temp != NULL)
     {
         if(newno->key ==  temp->key){
+            if(newno->info != NULL) free(newno->info);
             free(newno);
             return 1;
         }
@@ -184,10 +185,11 @@ int* porlevel(RBtree *tree){
     return resultado;
 }
 
-void _freenode(struct nodo *no){
+static void _freenode(struct nodo *no){
     if(no == NULL) return;
     if(no->left != NULL) _freenode(no->left);
     if(no->right != NULL) _freenode(no->right);
+    if(no->info != NULL) free(no->info);
     free(no);
     return;
 }
@@ -200,7 +202,7 @@ int freeRB(RBtree *tree){
     return 0;
 }
 
-void _inorder(struct  nodo *no, int *i, int *resultado)
+static void _inorder(struct  nodo *no, int *i, int *resultado)
 {
     if(no == NULL) return;
     if(no->left != NULL) _inorder(no->left, i, resultado);
@@ -212,15 +214,16 @@ void _inorder(struct  nodo *no, int *i, int *resultado)
 
 int* inorder(RBtree *tree)
 {
+    int *resultado = NULL;
     if(tree == NULL) return NULL;
-    int *resultado = malloc(sizeof(int) * tree->size);
+    if(tree->size > 0)resultado = malloc(sizeof(int) * tree->size);
     if(resultado == NULL) return NULL;
     int i = 0;
     _inorder(tree->raiz, &i, resultado);
     return resultado;
 }
 
-void __preorder(struct nodo *no, int *i, int *resultado)
+static void __preorder(struct nodo *no, int *i, int *resultado)
 {
     if(no == NULL) return;
     resultado[*i] = no->key;
@@ -273,7 +276,7 @@ int minValue(RBtree *tree)
     return aux->key;
 }
 
-struct nodo *_minValue(struct nodo *tree)
+static struct nodo *_minValue(struct nodo *tree)
 {
     if(tree == NULL) return NULL;
     struct nodo *aux = tree;
@@ -366,8 +369,10 @@ void _remove(RBtree *raiz, struct nodo *no, int key)
     if(temp->left != NULL && temp->right != NULL)
     {
         struct nodo *sucessor = _minValue(temp->right);
+        if(temp->info != NULL) free(temp->info);
         temp->key = sucessor->key;
         temp->info = sucessor->info;
+        sucessor->info = NULL;
         temp = sucessor;
     }
     COLOR oldcolor = temp->color;
@@ -408,6 +413,7 @@ void _remove(RBtree *raiz, struct nodo *no, int key)
         NIL->right = NULL;
         NIL->color = BLACK;
     }
+    if(temp->info != NULL) free(temp->info);
     free(temp);
     raiz->size--;
 }

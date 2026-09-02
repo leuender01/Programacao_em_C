@@ -35,7 +35,7 @@ Transport Tcp(const char *tipo, int port)
         exit(EXIT_FAILURE);                                                               
     }                                                                           
     printf("tipo:%s porta %i aberta\n",tipo, port);                                       
-    listen(new.socket_fd, 3);                                                       
+    listen(new.socket_fd, 20);                                                       
     memset(new.buffer, 0, sizeof(new.buffer));
 
     return new;

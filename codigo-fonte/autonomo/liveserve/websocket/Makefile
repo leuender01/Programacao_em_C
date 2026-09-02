@@ -10,9 +10,15 @@ Queue: Queuen/Queue.c
 Tcp: Tcp/Tcp.c
 	gcc -g -c Tcp/Tcp.c
 
-websocket: websocket.c captura_signal hash Queue bin/ Tcp
+rumbro_negra_Queuen: rumbro_negra/Queuen_rumbro.c
+	gcc -g -c rumbro_negra/Queuen_rumbro.c
+
+rumbro_negra: rumbro_negra/arvore_rumbro_negra.c
+	gcc -g -c rumbro_negra/arvore_rumbro_negra.c
+
+websocket: websocket.c captura_signal hash Queue bin/ Tcp rumbro_negra rumbro_negra_Queuen
 	gcc -g -c websocket.c
-	gcc -g websocket_teste.c websocket.o Tcp/Tcp.o capturar_signal.o hash/hash.o Queuen/Queue.o -o bin/websocket_teste -lcrypto
+	gcc -g websocket_teste.c websocket.o Tcp/Tcp.o capturar_signal.o hash/hash.o Queuen/Queue.o rumbro_negra/arvore_rumbro_negra.o rumbro_negra/Queuen_rumbro.o -o bin/websocket_teste -lcrypto
 	valgrind --leak-check=full bin/websocket_teste
 
 bin/:

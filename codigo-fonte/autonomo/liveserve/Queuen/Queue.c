@@ -54,6 +54,7 @@ struct Queuedata Dequeue(Queue *p)
 
 struct Queuedata peekQueue(Queue *p)
 {
+    if(p->size == 0) return (struct Queuedata){0, NULL, NULL};
     struct Queuedata new = {p->first->socket_fd, p->first->strig, NULL};
     return new;
 }
