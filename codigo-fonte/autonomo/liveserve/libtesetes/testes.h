@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <stdlib.h>
 
 #define COLOR_RED "\033[1;31m"
 #define COLOR_GREEN "\033[1;32m"
@@ -28,51 +29,86 @@
     void *: "%p\n",                       \
     default: "%p\n")
 
+
+#define type_sumary(x) _Generic((x),         \
+    unsigned char: "%c",                \
+    char: "%c",                         \
+    signed char: "%c",                  \
+    short int: "%hd",                   \
+    unsigned short int: "%hu",          \
+    int: "%d",                          \
+    unsigned int: "%u",                 \
+    long int: "%ld",                    \
+    unsigned long int: "%lu",           \
+    long long int: "%lld",              \
+    unsigned long long int: "%llu",     \
+    float: "%f",                        \
+    double: "%f",                       \
+    long double: "%Lf",                 \
+    char *: "%s",                       \
+    void *: "%p",                       \
+    default: "%p")
+
+
 #define PRINT_FAIL(actual, expected) \
-    do { \
+    do {                                                                          \
         printf("%s:%d: " COLOR_RED "Failure\n" COLOR_RESET , __FILE__, __LINE__); \
-        printf(COLOR_RED "RESULTADO: " COLOR_RESET);                                                                  \
-        printf(type_fmt(actual), actual);                                         \
-        printf(COLOR_GREEN "EXPECTATIVA: " COLOR_RESET);                                                                  \
-        printf(type_fmt(expected), expected);                                     \
-    } while (0)
+            printf(COLOR_RED "RESULTADO: " COLOR_RESET);                              \
+            printf(type_fmt(actual), actual);                                         \
+            printf(COLOR_GREEN "EXPECTATIVA: " COLOR_RESET);                          \
+            printf(type_fmt(expected), expected);                                     \
+        } while (0)
 
 
-#define TEST_CASE(_NAME_) static int _NAME_(void)
-#define TESTE_PASS() \
-    puts(COLOR_GREEN "PASSOU" COLOR_RESET);\
-    return 0;
+#define TEST_CASE(_NAME_) void * _NAME_(void *arg)
+#define TESTE_PASS()                                \
+        puts(COLOR_GREEN "PASSOU" COLOR_RESET);         \
+        return (void *)(intptr_t) 0;
 
-#define EXPECTED_EQ(_MESSAGE_, input, output) \
-    puts(COLOR_YELOW _MESSAGE_ COLOR_RESET);\
-    if(input != output) { \
-        PRINT_FAIL(input, output); \
-        return -1;\
+#define EXPECTED_EQ(_MESSAGE_, input, output)               \
+    if(input != output) {                                   \
+        puts(COLOR_RED "ERRO: " _MESSAGE_ COLOR_RESET);     \
+        PRINT_FAIL(input, output);                          \
+        return (void *)(intptr_t) -1;                                      \
     }
 
-#define EXPECT_COND(_CONDITION_)\
-    puts(COLOR_YELOW "TESTANDO SE A CONDIÇÃO " #_CONDITION_ " E VERDADEIRA" COLOR_RESET);\
-    if(!(_CONDITION_)){ \
-        PRINT_FAIL(_CONDITION_, 1); \
-        return -1;\
+#define EXPECT_COND(_CONDITION_)                            \
+    if(!(_CONDITION_)){                                     \
+        PRINT_FAIL(_CONDITION_, 1);                         \
+        void  *RETURN;                                      \
+        return (void *)(intptr_t) -1;                                      \
     }
         
 
-#define TEST_SUITE(...)  \
-    int main(void) {  \
-        int result = 0; \
-        int (*const TESTS[])(void) = { __VA_ARGS__ }; \
+#define TEST_SUITE(...)                                     \
+    int main(void) {                                        \
+        void* (*const TESTS[])(void *arg) = { __VA_ARGS__ };       \
         int size = sizeof(TESTS) / sizeof(*TESTS);\
-        for (uint32_t index = 0; index < size; ++index) { \
-            if (TESTS[index]() != 0) { \
-                result--; \
-            } \
-            result++;\
-        } \
-        printf(COLOR_GREEN "CASES:PASSOU [%d/%d] \n" COLOR_RESET, size, result); \
-        return (result != size); \
+        pthread_t *arrayId = malloc(sizeof(pthread_t) * size);\
+        for (uint32_t index = 0; index < size; ++index) {   \
+            if(pthread_create(&arrayId[index], NULL, TESTS[index], NULL)) { \
+                fprintf(stderr, COLOR_RED "Erro ao iniciar thread %d\n" COLOR_RESET, index); \
+            }                                                                               \
+        }                                                   \
+        int passed_count = 0;                                                       \
+        for (uint32_t index = 0; index < size; ++index) {                           \
+            void *thread_result;                                                    \
+            pthread_join(arrayId[index], &thread_result);                           \
+            if((intptr_t)thread_result == 0) passed_count++;                         \
+        }                                                                           \
+        printf(COLOR_GREEN "CASES:PASSOU [%d/%d] \n" COLOR_RESET, size, passed_count);    \
+        free(arrayId);                                                              \
+        return (passed_count != size);                                              \
     }
+
 #define MESSAGE(_MESSAGE_) puts(COLOR_YELOW " " _MESSAGE_ COLOR_RESET);
+
+#define SUMARY(resultado, base)                             \
+    printf(COLOR_YELOW "RESULTADO: ");                      \
+    printf(type_sumary(resultado), resultado);              \
+    printf(" | ") ;                                         \
+    printf(type_sumary(base), base);                        \
+    printf(" \n" COLOR_RESET);
 
 char *gerarStringAletaria(void);
 int numerosAletaorios(int seed);

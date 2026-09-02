@@ -40,8 +40,8 @@ struct nodo DequeueRB(QueuenRB *p)
     struct nodo result = p->first->fd;
     struct queuenRB  *freeno = p->first;
     p->first = p->first->prox;
-    free(freeno);
     p->size--;
+    free(freeno);
     return result;
 
 }

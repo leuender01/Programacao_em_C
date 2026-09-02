@@ -1,10 +1,21 @@
-#include <stdio.h>
-//#include <time.h>
 #include <stdlib.h>
+#include <time.h>
 #include "arvore_rumbro_negra.h"
 #include "libtesetes/testes.h"
-#define MAXTESTE 10
 
+#define MAXTESTE 100
+const int rodadas = 100;
+
+
+void valores_porlevel(RBtree *arv)
+{
+    int *resultadopreorder = porlevel(arv);
+    for (int i = 0; i < arv->size; i++) {
+        printf("%d ,", resultadopreorder[i]);
+    }
+    free(resultadopreorder);
+    printf("\n");
+}
 
 void inoder_funcition(struct  nodo *no)
 {
@@ -44,15 +55,12 @@ void listarpai(RBtree *tree)
 }
 
 int* testas_recurçao(int *func(RBtree *arv), RBtree* arv){
-    puts("\033[1;33mTESTANDO A RECURÇÃO ...\033[0m");
     int *arrayResultado = NULL;
     arrayResultado =  func(arv);
     if(arrayResultado == NULL){
-        perror("\033[1;31m FUNCAO RETORNOU NULL\033[0m");
-        printf("%d\n",freeRB(arv));
+        freeRB(arv);
         exit(1);
     }
-    puts("\033[1;32mPASSOU\033[0m");
     return arrayResultado;
 }
 
@@ -70,9 +78,7 @@ int orderLista(int *func(RBtree *arv), RBtree *arv)
     {
         testes = (arrayResultado[i] < arrayResultado[i + 1]);
     }
-    printf("\n");
     free(arrayResultado);
-    
     return !testes;
 }
 
@@ -83,14 +89,17 @@ int compararArvore(RBtree *arv)
     newRBtree(&treeTeste);
     int *resultadoTeste = NULL;
     int *resultado = preorder(arv);
-    EXPECT_COND(resultado != NULL);
+//    EXPECT_COND(resultado != NULL);
+    if(resultado == NULL) return -1;
     for (int i = 0; i < arv->size ; i++) 
     {
         insertRBtree(&treeTeste, resultado[i],  (void *)&resultado[i]);
     }
     resultadoTeste = preorder(&treeTeste);
-    EXPECT_COND(resultadoTeste != NULL);
-    EXPECTED_EQ("TESTANDO SE O TAMANHO DAS ARVORES SAO IGUAIS", arv->size, treeTeste.size);
+//    EXPECT_COND(resultadoTeste != NULL); 
+    if(resultadoTeste == NULL) return -1;
+//    EXPECTED_EQ("TESTANDO SE O TAMANHO DAS ARVORES SAO IGUAIS", arv->size, treeTeste.size);
+    if(arv->size != treeTeste.size) return -1;
     int data = 0;
     for(int i = 0; i < arv->size; i++){
         if(resultado[i] != resultadoTeste[i]) data = 1;
@@ -112,21 +121,24 @@ TEST_CASE(testar_criacao)
 
 TEST_CASE(testando_insercao)
 {
-    int values_teste[MAXTESTE] = {0};
-    RBtree arv;
-    newRBtree( &arv);
-    
-    int inseridos = 0;
-    for (int i = 0; i < MAXTESTE; i++) {
-        values_teste[i] = numerosAletaorios(1000);
-        if((insertRBtree(&arv, values_teste[i], (void *)&values_teste[i])) == 0) inseridos++;
+    MESSAGE("TESTANDO A INSEÇÃO NA ARVORE");
+    srand(time(NULL));
+    for(int j = 0; j < rodadas; j++){
+        int values_teste[MAXTESTE] = {0};
+        RBtree arv;
+        newRBtree( &arv);
+        
+        int inseridos = 0;
+        for (int i = 0; i < MAXTESTE; i++) {
+            values_teste[i] = numerosAletaorios(1000);
+            if((insertRBtree(&arv, values_teste[i], (void *)&values_teste[i])) == 0) inseridos++;
+            EXPECT_COND(checkarPropriedades(arv.raiz) > 0);
+        }
+        EXPECTED_EQ("TESTANDO INSEÇÃO...", inseridos,arv.size);
+        freeRB(&arv);
     }
-    EXPECTED_EQ("TESTANDO INSEÇÃO...", inseridos,arv.size);
-    printf("\033[1;32mRESULTADO: [%d/%lu]  \033[0m\n", inseridos, arv.size);
-    freeRB(&arv);
     TESTE_PASS();
 }
-
 
 TEST_CASE(testando_preorder)
 {
@@ -149,45 +161,49 @@ TEST_CASE(testando_preorder)
 
 TEST_CASE(testando_inorder)
 {
-    int values_teste[MAXTESTE] = {0};   
-    RBtree arv;
-    newRBtree( &arv);
-    for (int i = 0; i < MAXTESTE; i++) {
-        values_teste[i] = numerosAletaorios(1000);
-        insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
-    }
     MESSAGE("TESTANDO PERCURSO INORDER...");
-    EXPECT_COND(orderLista(inorder,  &arv) == 0);
-    freeRB(&arv);
+    int values_teste[MAXTESTE] = {0};   
+    for (int j = 0; j < rodadas; j++) {
+        RBtree arv;
+        newRBtree( &arv);
+        for (int i = 0; i < MAXTESTE; i++) {
+            values_teste[i] = numerosAletaorios(1000);
+            insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
+        }
+        EXPECT_COND(orderLista(inorder,  &arv) == 0);
+        freeRB(&arv);
+    }
     TESTE_PASS();
-
-
 
 }
 
 TEST_CASE(testando_busca)
 {
+    MESSAGE("TESTE DE BUSCA");
     int values_teste[MAXTESTE] = {0};   
-    RBtree arv;
-    newRBtree( &arv);
-    for (int i = 0; i < MAXTESTE; i++) {
-        values_teste[i] = numerosAletaorios(1000);
-        insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
+    srand(time(NULL));
+    int teste = 0;
+    for (int j = 0 ; j < rodadas; j++) {
+        RBtree arv;
+        newRBtree( &arv);
+        for (int i = 0; i < MAXTESTE; i++) {
+            values_teste[i] = numerosAletaorios(1000);
+            insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
+        }
+        int acertos = 0;
+        for (int i = 0; i < MAXTESTE; i++) {
+            if((int *)binarySearch(&arv, values_teste[i]) != NULL) acertos++;
+        }
+        if(acertos == MAXTESTE) teste++;
+        freeRB(&arv);
     }
-    int acertos = 0;
-    printf("\033[1;33mTESTE DE BUSCA\033[0m\n");
-    for (int i = 0; i < MAXTESTE; i++) {
-        if((int *)binarySearch(&arv, values_teste[i]) != NULL) acertos++;
-    }
-    EXPECTED_EQ("TESTANDO SE A BUSCA NA ARVORE RUMBRO NEGRA", acertos, 0);
-    freeRB(&arv);
+    SUMARY(teste, rodadas);
     TESTE_PASS();
 }
 
-
-
 TEST_CASE(testando_porlevel)
 {
+    MESSAGE("TESTANDO PERCURSO PORLEVEL...");
     int values_teste[MAXTESTE] = {0};   
     RBtree arv;
     newRBtree( &arv);
@@ -196,34 +212,35 @@ TEST_CASE(testando_porlevel)
         values_teste[i] = numerosAletaorios(1000);
         insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
     }
-    MESSAGE("TESTANDO PERCURSO PORLEVEL...");
     resultado =  testas_recurçao(porlevel, &arv);
     EXPECT_COND(resultado != NULL);
     free(resultado);
-    resultado = NULL;
     freeRB(&arv);
     TESTE_PASS();
 }
 
 TEST_CASE(menor_maior)
 {
+    MESSAGE("TESTANDO SE ENCONTROU MAIOR E MENOR VALOR");
     int values_teste[MAXTESTE] = {0};
-    RBtree arv;
-    newRBtree( &arv);
-    for (int i = 0; i < MAXTESTE; i++) {
-        values_teste[i] = numerosAletaorios(1000);
-        insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
+    for(int j = 0; j < rodadas; j++){
+        RBtree arv;
+        newRBtree( &arv);
+        for (int i = 0; i < MAXTESTE; i++) {
+            values_teste[i] = numerosAletaorios(1000);
+            insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
+        }
+        
+        int maior_valor = values_teste[0];
+        int menor_valor = values_teste[0];
+        for (int i = 0; i < MAXTESTE ; i++) {
+            if(values_teste[i] > maior_valor) maior_valor = values_teste[i];
+            if(values_teste[i] < menor_valor) menor_valor = values_teste[i];
+        }
+        EXPECTED_EQ("TESTANDO SE SE A ARVORE ENCONTROU O MENOR VALOR", menor_valor, minValue(&arv));
+        EXPECTED_EQ("TESTANDO SE SE A ARVORE ENCONTROU O MAIOR VALOR", maior_valor, maxValue(&arv));
+        freeRB(&arv);
     }
-    
-    int maior_valor = values_teste[0];
-    int menor_valor = values_teste[0];
-    for (int i = 0; i < MAXTESTE ; i++) {
-        if(values_teste[i] > maior_valor) maior_valor = values_teste[i];
-        if(values_teste[i] < menor_valor) menor_valor = values_teste[i];
-    }
-    EXPECTED_EQ("TESTANDO SE SE A ARVORE ENCONTROU O MENOR VALOR", menor_valor, minValue(&arv));
-    EXPECTED_EQ("TESTANDO SE SE A ARVORE ENCONTROU O MAIOR VALOR", maior_valor, maxValue(&arv));
-    freeRB(&arv);
     TESTE_PASS();
     return 0;
 }
@@ -231,83 +248,70 @@ TEST_CASE(menor_maior)
 
 TEST_CASE(validarArvoreRumbro)
 {
+    MESSAGE("TESTANDO SE E UMA ARVORE RUMBRO NEGRA VALIDA...");
     int values_teste[MAXTESTE] = {0};
-    RBtree arv;
-    newRBtree( &arv);
-    for (int i = 0; i < MAXTESTE; i++) {
-        values_teste[i] = numerosAletaorios(1000);
-        insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
+    int relatorio = 0;
+    for(int j = 0; j < rodadas; j++){
+        RBtree arv;
+        newRBtree( &arv);
+        for (int i = 0; i < MAXTESTE; i++) {
+            values_teste[i] = numerosAletaorios(1000);
+            insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
+        }
+        if(arv.raiz == NULL){
+           return 0;
+        } 
+        
+        EXPECTED_EQ("CHECANDO SE A ARVORE E UMA ARVORE RUMBRO NEGRA VALIDA", arv.raiz->color,  BLACK);
+        int result = checkarPropriedades(arv.raiz);
+        EXPECT_COND(result != -1);
+        relatorio++;
+        freeRB(&arv);
     }
-    puts("\033[1;33mTESTANDO SE E UMA ARVORE RUMBRO NEGRA VALIDA...\033[0m");
-    if(arv.raiz == NULL){
-       return 0;
-    } 
-    
-    EXPECTED_EQ("TESTANDO SE A ARVORE A RAIZ DA ARVORE E RUMBRO", arv.raiz->color,  BLACK);
-    MESSAGE("CHECANDO SE A ARVORE E UMA ARVORE RUMBRO NEGRA VALIDA");
-    EXPECT_COND(checkarPropriedades(arv.raiz) != -1);
-    freeRB(&arv);
+    SUMARY(relatorio, rodadas);
     TESTE_PASS();
 }
 
-void valores_porlevel(RBtree *arv)
-{
 
-    int *resultadopreorder = porlevel(arv);
-    for (int i = 0; i < arv->size; i++) {
-        printf("%d ,", resultadopreorder[i]);
+TEST_CASE(remocao_arvore)
+{
+    int values_teste[MAXTESTE] = {0};
+    MESSAGE("CHECANDO SE E UMA ARVORE RUMBRO NEGRA VALIDA E REMOVENDO INTEIRA");
+    for(int j = 0; j < rodadas; j++){
+        RBtree arv;
+        newRBtree( &arv);
+        EXPECT_COND(arv.raiz == NULL && arv.size == 0);
+        for (int i = 0; i < MAXTESTE; i++) {
+            values_teste[i] = numerosAletaorios(1000);
+            insertRBtree(&arv, values_teste[i], (void *)&values_teste[i]);
+        }
+        int result = removeRbtree(&arv, values_teste[0]);
+        EXPECTED_EQ("TESTANDO SE A REMOÇÃO FOI VALIDA", result, 1);
+        result = removeRbtree(&arv, values_teste[0]);
+        EXPECTED_EQ("TESTANDO SE A REMOÇÃO DE UM ELEMENTO JA REMOVIDO", result, 0);
+        int value_raiz_old = arv.raiz->key;
+        EXPECTED_EQ("REMOVENDO A RAIZ",  removeRbtree(&arv, arv.raiz->key), 1);
+        EXPECT_COND(value_raiz_old != arv.raiz->key);
+        EXPECTED_EQ("TESTANDO SE A ARVORE A RAIZ DA ARVORE E BLACK", arv.raiz->color,  BLACK);
+        EXPECT_COND(checkarPropriedades(arv.raiz) > 0);
+        for (int i = 0; i < MAXTESTE; i++) {
+            removeRbtree(&arv, values_teste[i]);
+        }
+        EXPECT_COND(arv.raiz == NULL && arv.size == 0);
+        EXPECTED_EQ("TESTANDO LIBERAR MEMORIA ", freeRB(&arv), 0) ;
     }
-    free(resultadopreorder);
-    printf("\n");
+    TESTE_PASS();
 }
 
-TEST_SUITE(menor_maior, testando_insercao, testar_criacao, testando_preorder, testando_inorder, testando_porlevel,  testando_busca, validarArvoreRumbro); 
 
-
-//int main(void){
-//    RBtree arv;
-//    newRBtree(&arv);
-//    srand(time(NULL));
-//    testar_criacao(&arv);
-//    testando_insercao(&arv);
-//    menor_maior(&arv);
-//    listarpai(&arv);
-//    validarArvoreRumbro(&arv);
-//    removeRbtree(&arv, 916);
-//    validarArvoreRumbro(&arv);
-//    removeRbtree(&arv, 887);
-//    validarArvoreRumbro(&arv);
-//    removeRbtree(&arv, 493);
-//    validarArvoreRumbro(&arv);
-//    valores_porlevel(&arv);
-//
-    /*
-//    testando_percursos(&arv);
-//    listarpai(&arv);
-//    listarpai(&arv);
-//    valores_porlevel(&arv);
-//    listarpai(&arv);
-//    valores_porlevel(&arv);
-//    listarpai(&arv);
-//    validarArvoreRumbro(&arv);
-//    valores_porlevel(&arv);
-    printf("%d\n",maxValue(&arv));
-    printf("%d\n",minValue(&arv));    
-    int *resultadoporlevel = porlevel(&arv);
-    listarpai(&arv);
-    
-    for (int i = 0; i < arv.size; i++) {
-        printf("%d ,", resultadoporlevel[i]);
-    }
-    printf("\n");
-    printf("\n");
-    for (int i = 0; i < arv.size; i++) {
-        printf("%d ,", values_teste[i]);
-    }
-    printf("\n");
-    free(resultadoporlevel);
-    resultadoporlevel = NULL;
-    */
-//    freeRB(&arv);
-//    return 0;
-//}
+TEST_SUITE(
+        remocao_arvore, 
+        testando_busca,
+        testando_inorder,
+        testando_insercao,
+        testando_porlevel,
+        testando_preorder,
+        menor_maior,
+        validarArvoreRumbro,
+        testar_criacao
+        )
