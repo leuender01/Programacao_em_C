@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <time.h>
 
 #define COLOR_RED "\033[1;31m"
 #define COLOR_GREEN "\033[1;32m"
@@ -141,6 +142,12 @@
     printf(" | ") ;                                         \
     printf(type_sumary(base), base);                        \
     printf(" \n" COLOR_RESET);
+
+#define CLOCK_INIT clock_t inicio = clock();
+#define CLOCK_FINISH clock_t fim = clock(); \
+         double time_final = (double)(fim - inicio) / CLOCKS_PER_SEC ; \
+         printf( COLOR_YELOW "tempo de execulcao: %lf\n" COLOR_RESET, time_final);
+
 
 char *gerarStringAletaria(void);
 int numerosAletaorios(int seed);
