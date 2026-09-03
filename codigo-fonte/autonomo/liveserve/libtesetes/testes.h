@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #define COLOR_RED "\033[1;31m"
 #define COLOR_GREEN "\033[1;32m"
@@ -100,6 +102,36 @@
         free(arrayId);                                                              \
         return (passed_count != size);                                              \
     }
+
+
+#define TEST_SUITE_ISOLATE(...)                                     \
+    int main(void) {                                        \
+        void* (*const TESTS[])(void *arg) = { __VA_ARGS__ };       \
+        int size = sizeof(TESTS) / sizeof(*TESTS);\
+        pid_t *pids = malloc(sizeof(pid_t) * size);\
+        for (int index = 0; index < size; ++index) {   \
+            pid_t pid = fork();                          \
+            if(pid < 0) { \
+                fprintf(stderr, COLOR_RED "Erro ao executar fork para o teste %d\n" COLOR_RESET, index); \
+            }else if(pid == 0){ \
+                void *res = TESTS[index](NULL);\
+                exit((intptr_t)res != 0);\
+            } else { \
+                pids[index] = pid;\
+                }                                                   \
+        }\
+        int passed_count = 0;                                                       \
+        for (uint32_t index = 0; index < size; ++index) {                           \
+            int status = 0;                                                         \
+            waitpid(pids[index], &status, 0);                                       \
+            if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {                    \
+                passed_count++;                                     \
+            }                                                        \
+        }                                                                           \
+        printf(COLOR_GREEN "CASES:PASSOU [%d/%d] \n" COLOR_RESET, size, passed_count);    \
+        free(pids);                                                              \
+        return (passed_count != size);                                              \
+        }
 
 #define MESSAGE(_MESSAGE_) puts(COLOR_YELOW " " _MESSAGE_ COLOR_RESET);
 

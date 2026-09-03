@@ -1,12 +1,12 @@
-Tcp: Tcp.c
-	gcc -g -c Tcp.c
+Tcp.o: 
+	gcc  -c Tcp.c
 
-Queue: Queuen/Queue.c
-	gcc -g -c Queuen/Queue.c
+Queue.o: 
+	gcc  -c Queuen/Queue.c
 
 bin/:
 	mkdir bin
 
-Tcp_teste: Tcp bin/ Queue
-	gcc -g Tcp.o tcp_teste.c Queue.o -o bin/tcp_teste
+Tcp_teste: Tcp.o bin/ Queue.o
+	gcc Tcp.o tcp_teste.c Queue.o -o bin/tcp_teste
 	valgrind --leak-check=full bin/tcp_teste

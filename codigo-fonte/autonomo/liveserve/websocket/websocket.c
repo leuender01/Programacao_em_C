@@ -70,7 +70,7 @@ static char *string_gerada(char *key_start)
         return resposta;
 }
 
-void enviar_mensagem_websocket(int client_fd, const char *mensagem) {
+static void enviar_mensagem_websocket(int client_fd, const char *mensagem) {
     if (client_fd <= 0) {
         return;
     }
