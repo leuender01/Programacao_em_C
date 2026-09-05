@@ -10,7 +10,7 @@ Queue_teste: Queuen_rumbro.o bin/ gerar_strings_aleatorias.o
 arvore_rumbro_negra.o: arvore_rumbro_negra.c 
 	gcc  -c arvore_rumbro_negra.c 
 
-Rumbro_negra_teste: arvore_rumbro_negra.o arvore_rumbro_negra_teste.c  gerar_strings_aleatorias.o
+Rumbro_negra_teste: arvore_rumbro_negra.o arvore_rumbro_negra_teste.c  gerar_strings_aleatorias.o Queuen_rumbro.o
 	gcc arvore_rumbro_negra.o Queuen_rumbro.o arvore_rumbro_negra_teste.c gerar_strings_aleatorias.o -o bin/arvore_rumbro_negra_teste -pthread
 	valgrind --leak-check=full bin/arvore_rumbro_negra_teste
 

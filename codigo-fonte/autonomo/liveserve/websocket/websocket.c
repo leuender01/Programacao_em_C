@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -16,15 +17,18 @@
 #include "Queuen/Queue.h"
 #include "rumbro_negra/arvore_rumbro_negra.h"
 
+#ifndef LOCAL_HOST
+#define LOCAL_HOST "0.0.0.0"
+#endif
 static const char erro404[] = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
 static char resposta101[] = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ";
-const int time_aguardar = 20000;
-volatile int flag = -1;
-volatile int rodando = 1;
+static const int time_aguardar = 20000;
+
+extern volatile int rodando;
 pthread_mutex_t block = PTHREAD_MUTEX_INITIALIZER;
 
-extern int ws_port;
-HASH clientes_threads;
+static int ws_port = 8081;
+static HASH clientes_threads;
 Queue output;
 Queue system_message;
 RBtree situacao_atual;
@@ -33,6 +37,41 @@ struct cancel_thread{
     int fd;
     pthread_t fd_thread;
 };
+
+static int aguardar_fd(int fd, long timeout_usec){
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(fd, &readfds);
+    struct timeval timeout = {0, timeout_usec};
+    return select(fd + 1, &readfds, NULL, NULL, &timeout);
+}
+
+static void calcular_chave_websocket(const char *key, char *output)
+{
+     char GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";     
+     char buffer[256];                                         
+     unsigned char sha1_result[SHA_DIGEST_LENGTH];             
+                                                               
+     memset(buffer, 0, sizeof(buffer));                        
+     memset(sha1_result, 0, sizeof(sha1_result));              
+     sprintf(buffer, "%s%s", key, GUID);                       
+                                                               
+     SHA1((unsigned char*)buffer, strlen(buffer), sha1_result);
+     BIO *bio, *b64;                                           
+     BUF_MEM *buffer_ptr;                                      
+     b64 = BIO_new(BIO_f_base64());                            
+     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);               
+     bio = BIO_new(BIO_s_mem());                               
+     bio = BIO_push(b64, bio);                                 
+     BIO_write(bio, sha1_result, SHA_DIGEST_LENGTH);           
+     BIO_flush(bio);                                    
+     bio = BIO_pop(b64);                                       
+     BIO_get_mem_ptr(bio, &buffer_ptr);                        
+     memcpy(output, buffer_ptr->data, buffer_ptr->length);     
+     output[buffer_ptr->length] = '\0';                               
+     BIO_free_all(bio);                                        
+     BIO_free(b64);                                            
+    }
 
 static void *liberaThread(void *arg)
 {
@@ -92,7 +131,6 @@ static void enviar_mensagem_websocket(int client_fd, const char *mensagem) {
     } else {
         return;
     }
-
     memcpy(frame + frame_len, mensagem, len);
     frame_len += len;
     write(client_fd, frame, frame_len);
@@ -124,7 +162,7 @@ void *websocket_write(void *arg){
     return NULL;
 }
 
-static void opcodesData(Transport *websocket, int opcode){
+static void opcodesData(CLientTranport *websocket, int opcode){
     int playload_len = 0;
     int mask_index =0;
     int data_index = 0;
@@ -172,7 +210,8 @@ static void opcodesData(Transport *websocket, int opcode){
 
 static void *websocket_read(void *arg)
 {
-    Transport *websocket = (Transport *)arg;
+    CLientTranport *websocket = (CLientTranport *)arg;
+    if(websocket ==  NULL) return NULL;
     websocket->input = NULL;
     websocket->input = malloc(sizeof(Queue));
     if(websocket->input == NULL){
@@ -191,7 +230,7 @@ static void *websocket_read(void *arg)
     if(key_start == NULL)
     {
         write(websocket->connection_fd, erro404, strlen(erro404));
-//        printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Cliente encerrou a conexao na porta %d.\n", ws_port);
+
         websocket->websocket_ative = 0;
         break;
     }
@@ -199,11 +238,6 @@ static void *websocket_read(void *arg)
     write(websocket->connection_fd, resposta, strlen(resposta));
     free(resposta);
 
-    pthread_mutex_lock(&block);
-    flag = websocket->connection_fd;
-    pthread_mutex_unlock(&block);
-
-//    printf("\033[32m[\033[1mWS\033[0m\033[32m]\033[0m: Conexao estabelecida com sucesso\n\n");
     while(websocket->websocket_ative){
         memset(websocket->buffer, 0,sizeof(websocket->buffer));
         int pronto_msg = aguardar_fd(websocket->connection_fd, time_aguardar);
@@ -250,8 +284,6 @@ static void *websocket_read(void *arg)
         pthread_detach(delete_id);
         
     }
-//    printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Conexao perdida com o navegador websocket:[%d].\n", websocket->connection_fd);
-//    removeRbtree(&situacao_atual, websocket->connection_fd);
     Enqueue(&system_message, "\033[1;31m Desconectado \033[0m", websocket->connection_fd);
     close(websocket->connection_fd);
     websocket->connection_fd = -1;
@@ -280,10 +312,30 @@ static void *listar_conexoes(void *arg)
     }
     return NULL;
 }
+ServerTransport  initserver(void){
+    ServerTransport new;
+    memset(&new, 0, sizeof(ServerTransport));
+    new.client_size = sizeof(new.client);
+    new.connection_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if(new.connection_fd <= 0) return  (ServerTransport){-1, 0};
+    int optar = 1;
+    if (setsockopt(new.connection_fd, SOL_SOCKET, SO_REUSEADDR, &optar, sizeof(optar)) < 0) {
+        return  (ServerTransport){-1, 0};
+    }
+    new.myserve.sin_family = AF_INET;                                               
+    new.myserve.sin_port = htons(ws_port);                                             
+    new.myserve.sin_addr.s_addr = INADDR_ANY;                                       
+    inet_aton(LOCAL_HOST, &(new.myserve.sin_addr));                                 
+    if(bind(new.connection_fd, (struct sockaddr*)&new.myserve, sizeof(new.myserve)) != 0) return (ServerTransport){-1, 0};                                                                       
+    listen(new.connection_fd, 20);                                                       
+    memset(new.buffer, 0, sizeof(new.buffer));
+    return new;
+}
 
-void *websocket_serve(void *arg)
+int websocket_serve(void)
 {
-    Transport *websocket = (Transport *)arg;
+    ServerTransport websocket = initserver();
+    if(websocket.connection_fd < 0) return -1;
     pthread_t listar_id, output_mensage;
 
     inithash(&clientes_threads);
@@ -294,30 +346,28 @@ void *websocket_serve(void *arg)
     pthread_create(&output_mensage, NULL, websocket_write , NULL);
     pthread_create(&listar_id, NULL, listar_conexoes , NULL);
     printf("Servidor Websocket Iniciado");
-    if(websocket == NULL) return NULL;
-    Transport *cliente = NULL;
+    CLientTranport *cliente = NULL;
     printf("iniciado com sucesso esperando um conexao na porta no enderço http://localhost:%d\n", ws_port);
     while (rodando) {
-        int pronto = aguardar_fd(websocket->socket_fd , time_aguardar );
+        int pronto = aguardar_fd(websocket.connection_fd , time_aguardar );
         if(pronto == 0) continue;
         if(pronto < 0 && errno != EINTR) continue;
 
-        cliente = malloc(sizeof(Transport));
+        cliente = malloc(sizeof(CLientTranport));
         if(cliente == NULL) continue;
-        memcpy(cliente, websocket, sizeof(Transport));
-        cliente->client_size = sizeof(cliente->client);
 
-        cliente->connection_fd = accept(websocket->socket_fd, (struct sockaddr*)&cliente->client, &cliente->client_size);
+        cliente->connection_fd = accept(websocket.connection_fd ,(struct sockaddr*)&websocket.client, &websocket.client_size);
         if(cliente->connection_fd < 0){
             free(cliente);
             continue;
         }
-        int *alocar = malloc(sizeof(int));
-        if(alocar != NULL){
-            *alocar = cliente->connection_fd;
-            insertRBtree(&situacao_atual, cliente->connection_fd, (void *)alocar);
-            alocar = NULL;
+        if(situacao_atual.size > 430)
+        {
+            close(cliente->connection_fd);
+            free(cliente);
+            continue;
         }
+        insertRBtree(&situacao_atual, cliente->connection_fd);
         Enqueue(&system_message, "\033[1;32m conectado \033[0m", cliente->connection_fd);
         memset(cliente->buffer, 0, sizeof(cliente->buffer));
         pthread_t websocket_id;
@@ -336,54 +386,17 @@ void *websocket_serve(void *arg)
             cliente->websocket_ative = 0;
         }
         pthread_mutex_unlock(&block);
-//        Enqueue(&output, "reload", 0);
     }
-
     printf("\033[31m[\033[1mWS\033[0m\033[31m]\033[0m: Servidor Encerrando... %d.\n", ws_port);
     pthread_mutex_lock(&block);
     freehash(&clientes_threads);
-    flag = -1;
     freeQueuen(&output);
-    close(websocket->socket_fd);
-    websocket->socket_fd = -1;
+    freeQueuen(&system_message);
+    close(websocket.connection_fd);
+    websocket.connection_fd = -1;
     freeRB(&situacao_atual);
     pthread_mutex_unlock(&block);
     pthread_join(listar_id, NULL);
     pthread_join(output_mensage, NULL);
-    return NULL;
-}
-
-void calcular_chave_websocket(const char *key, char *output)
-{
-     char GUID[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";     
-     char buffer[256];                                         
-     unsigned char sha1_result[SHA_DIGEST_LENGTH];             
-                                                               
-     memset(buffer, 0, sizeof(buffer));                        
-     memset(sha1_result, 0, sizeof(sha1_result));              
-     sprintf(buffer, "%s%s", key, GUID);                       
-                                                               
-     SHA1((unsigned char*)buffer, strlen(buffer), sha1_result);
-     BIO *bio, *b64;                                           
-     BUF_MEM *buffer_ptr;                                      
-     b64 = BIO_new(BIO_f_base64());                            
-     BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);               
-     bio = BIO_new(BIO_s_mem());                               
-     bio = BIO_push(b64, bio);                                 
-     BIO_write(bio, sha1_result, SHA_DIGEST_LENGTH);           
-     BIO_flush(bio);                                    
-     bio = BIO_pop(b64);                                       
-     BIO_get_mem_ptr(bio, &buffer_ptr);                        
-     memcpy(output, buffer_ptr->data, buffer_ptr->length);     
-     output[buffer_ptr->length] = '\0';                               
-     BIO_free_all(bio);                                        
-     BIO_free(b64);                                            
-    }
-
-static int aguardar_fd(int fd, long timeout_usec){
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(fd, &readfds);
-    struct timeval timeout = {0, timeout_usec};
-    return select(fd + 1, &readfds, NULL, NULL, &timeout);
+    return 0;
 }

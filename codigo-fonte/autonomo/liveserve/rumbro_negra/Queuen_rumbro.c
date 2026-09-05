@@ -19,9 +19,10 @@ int empytQueueRB(QueuenRB *p)
 int EnqueueRB(QueuenRB *p, struct nodo* value)
 {
     if(p == NULL) return 1;
+    if(value == NULL) return 1;
     struct queuenRB *newnode = malloc(sizeof(struct queuenRB));
     if(newnode == NULL) return 1;
-    *newnode = (struct queuenRB){*value, NULL};
+    *newnode = (struct queuenRB){value, NULL};
     if(p->size == 0 || p->first == NULL)
     {
         *p = (QueuenRB){.first=newnode, .tail=newnode};
@@ -37,12 +38,12 @@ int EnqueueRB(QueuenRB *p, struct nodo* value)
 struct nodo DequeueRB(QueuenRB *p)
 {
     if(p == NULL || empytQueueRB(p)) return (struct nodo){.color=BLACK, .key=-1, .left=NULL, .right=NULL};
-    struct nodo result = p->first->fd;
+    struct nodo *result = p->first->fd;
     struct queuenRB  *freeno = p->first;
     p->first = p->first->prox;
     p->size--;
     free(freeno);
-    return result;
+    return *result;
 
 }
 int freeQueuenRB(QueuenRB *p)
@@ -61,5 +62,5 @@ int freeQueuenRB(QueuenRB *p)
 struct nodo peekQueueRB(QueuenRB *p)
 {
     if(p->first == NULL) return (struct nodo){.color=BLACK, .key=-1, .left=NULL, .right=NULL};
-    return p->first->fd;
+    return *p->first->fd;
 }

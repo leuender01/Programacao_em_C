@@ -19,20 +19,9 @@ int inithash(HASH *table){
     return 0;
 }
 
-/*
-unsigned long calcularHash(char *string){
-    unsigned long hash = 5381;
-    int c;
-    while((c = *string++)){
-        hash = ((hash << 5) + hash) + c;
-    }
-    return hash % TAM_INICIAL;
-}
-*/
-
 int insertHash(HASH *table, int key, pthread_t value){
     if(key < 0) return 1;
-//    unsigned long hash = calcularHash((char *)key);
+
     unsigned long hash = key % TAM_INICIAL;
     if(table->no[hash].key >=  0){
         struct node *no = malloc(sizeof(struct node));
@@ -44,14 +33,12 @@ int insertHash(HASH *table, int key, pthread_t value){
         no->colision = table->no[hash].colision;
         table->no[hash].colision = no;
         table->size++;
-        table->debug.colision++;
         return 0;
     }
     table->no[hash].key = key;
     table->no[hash].value = value;
     table->no[hash].colision = NULL;
     table->size++;
-    table->debug.normal++;
     return 0;
 }
 
@@ -68,20 +55,17 @@ int insertHashValue(HASH *table, int key, pthread_t value){
         no->colision = table->no[hash].colision;
         table->no[hash].colision = no;
         table->size++;
-        table->debug.colision++;
         return 0;
     }
     table->no[hash].key = key;
     table->no[hash].value = value;
     table->no[hash].colision = NULL;
     table->size++;
-    table->debug.normal++;
     return 0;
 }
 
 pthread_t searchHash(HASH *table, int key){
     if(key < 0) return 1;
-//    unsigned long hash = calcularHash((char *)key);
     unsigned long hash = key % TAM_INICIAL;
     if(table->no[hash].key >= 0 && table->no[hash].key == key){
         return table->no[hash].value;
@@ -126,10 +110,8 @@ int deleteHashValue(HASH *table, pthread_t value){
             table->no[hash].value = aux->value;
             table->no[hash].colision = aux->colision;
             free(aux);
-            table->debug.colision--;
         } else{
             table->no[hash].value = -1;
-            table->debug.normal--;
         }
         table->size--;
         return 0;
@@ -148,7 +130,6 @@ int deleteHashValue(HASH *table, pthread_t value){
                 aux->key= -1;
                 free(aux);
                 table->size--;
-                table->debug.colision--;
                 return 0;
             }
             prev = aux;
@@ -160,7 +141,6 @@ int deleteHashValue(HASH *table, pthread_t value){
 
 int deleteHash(HASH *table, int key){
     if(table == NULL) return 1;
-//    unsigned long hash = calcularHash((char *)key);
     unsigned long hash = key % TAM_INICIAL;
     if(table->no[hash].key ==  key){
         table->no[hash].key = -1;
@@ -171,11 +151,9 @@ int deleteHash(HASH *table, int key){
             table->no[hash].value = aux->value;
             table->no[hash].colision = aux->colision;
             free(aux);
-            table->debug.colision--;
         } else{
             pthread_join(table->no[hash].value, NULL);
             table->no[hash].value = -1;
-            table->debug.normal--;
         }
         table->size--;
         return 0;
@@ -196,7 +174,6 @@ int deleteHash(HASH *table, int key){
                 pthread_mutex_unlock(&block);
                 free(aux);
                 table->size--;
-                table->debug.colision--;
                 return 0;
             }
             prev = aux;

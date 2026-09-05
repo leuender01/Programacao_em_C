@@ -8,14 +8,14 @@ struct node{
     struct node *colision;  
 };
 
+/*
 struct debug{
     int colision;
     int normal;
 };
-
+*/
 typedef struct{
     int size;
-    struct debug debug;
     struct node* no; 
 }HASH;
 

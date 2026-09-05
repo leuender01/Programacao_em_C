@@ -12,10 +12,5 @@ struct  serverHTTP{
     struct sockaddr_in client;
 };
 
-struct listaArquivos{
-    char **string;
-    unsigned long legth;
-};
-
-void *http_server(void *);
+int http_server(void);
 #endif

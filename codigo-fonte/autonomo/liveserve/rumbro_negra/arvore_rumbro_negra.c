@@ -108,10 +108,10 @@ static void isBalance(RBtree *raiz, struct nodo *no)
     raiz->raiz->color = BLACK;
 }
 
-static struct nodo *newNodo(int value, void *info){
+static struct nodo *newNodo(int value){
     struct nodo *newno = NULL;
     newno = malloc(sizeof(struct nodo));
-    if(newno != NULL) *newno = (struct nodo){.color=RUMBRO, .key=value, .left=NULL, .right=NULL, .dad=NULL, .info=info};
+    if(newno != NULL) *newno = (struct nodo){.color=RUMBRO, .key=value, .left=NULL, .right=NULL, .dad=NULL};
     return newno;
  }
 
@@ -126,9 +126,9 @@ static struct nodo *__binarySearch(struct nodo *aux,int value)
     return NULL;
 }
 
-int insertRBtree(RBtree *tree, int key, void *info){
+int insertRBtree(RBtree *tree, int key){
     if(tree == NULL) return 1;
-    struct nodo *newno = newNodo(key, info);
+    struct nodo *newno = newNodo(key);
     if(newno == NULL) return 1;
     struct nodo *temp = tree->raiz;
     struct nodo *dad = NULL;
@@ -136,7 +136,6 @@ int insertRBtree(RBtree *tree, int key, void *info){
     while( temp != NULL)
     {
         if(newno->key ==  temp->key){
-            if(newno->info != NULL) free(newno->info);
             free(newno);
             return 1;
         }
@@ -189,7 +188,6 @@ static void _freenode(struct nodo *no){
     if(no == NULL) return;
     if(no->left != NULL) _freenode(no->left);
     if(no->right != NULL) _freenode(no->right);
-    if(no->info != NULL) free(no->info);
     free(no);
     return;
 }
@@ -243,12 +241,12 @@ int* preorder(RBtree *tree)
     return resultado;
 }
 
-void *binarySearch(RBtree *tree, int key)
+int binarySearch(RBtree *tree, int key)
 {
-    if(key < 0) return NULL;
+    if(key < 0) return -1;
     struct nodo *aux = __binarySearch(tree->raiz, key);
-    if(aux == NULL) return NULL;
-    return aux->info;
+    if(aux == NULL) return -1;
+    return aux->key;
     
 }
 
@@ -288,15 +286,15 @@ static struct nodo *_minValue(struct nodo *tree)
     return aux;
 }
 
-static struct nodo NIL_NODE = {.color = BLACK, .key = -1, .info = NULL, .left = NULL, .right = NULL, .dad = NULL};
+static struct nodo NIL_NODE = {.color = BLACK, .key = -1, .left = NULL, .right = NULL, .dad = NULL};
 #define NIL (&NIL_NODE)
 
-static COLOR colorOf(struct nodo *n)
+static char colorOf(struct nodo *n)
 {
     return (n == NULL) ? BLACK : n->color;
 }
 
-void remove_fixup(RBtree *arv, struct nodo *x)
+static void remove_fixup(RBtree *arv, struct nodo *x)
 {
     while (x != arv->raiz && colorOf(x) == BLACK) {
         struct nodo *dad = x->dad;
@@ -356,7 +354,7 @@ void remove_fixup(RBtree *arv, struct nodo *x)
     }
     x->color = BLACK;
 }
-void _remove(RBtree *raiz, struct nodo *no, int key)
+static void _remove(RBtree *raiz, struct nodo *no, int key)
 {
     struct nodo *temp = no;
     while (temp != NULL) {
@@ -369,13 +367,10 @@ void _remove(RBtree *raiz, struct nodo *no, int key)
     if(temp->left != NULL && temp->right != NULL)
     {
         struct nodo *sucessor = _minValue(temp->right);
-        if(temp->info != NULL) free(temp->info);
         temp->key = sucessor->key;
-        temp->info = sucessor->info;
-        sucessor->info = NULL;
         temp = sucessor;
     }
-    COLOR oldcolor = temp->color;
+    char oldcolor = temp->color;
     struct nodo *filho = (temp->left != NULL) ?  temp->left : temp->right;
     int userNil=  0;
     if(filho == NULL)
@@ -413,7 +408,6 @@ void _remove(RBtree *raiz, struct nodo *no, int key)
         NIL->right = NULL;
         NIL->color = BLACK;
     }
-    if(temp->info != NULL) free(temp->info);
     free(temp);
     raiz->size--;
 }

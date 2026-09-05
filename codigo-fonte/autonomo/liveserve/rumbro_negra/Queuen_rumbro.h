@@ -3,7 +3,7 @@
 #include "arvore_rumbro_negra.h"
 
 struct queuenRB{
-    struct nodo fd;
+    struct nodo *fd;
     struct queuenRB *prox;
 };
 

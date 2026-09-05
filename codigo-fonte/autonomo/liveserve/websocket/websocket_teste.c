@@ -2,6 +2,8 @@
 #include "websocket.h"
 #include "websocket_client.h"
 #include "rumbro_negra/arvore_rumbro_negra.h"
+#include "capturar_signal.h"
+#include "hash/hash.h"
 #include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
@@ -9,28 +11,33 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-int ws_port = 8081;
 extern Queue output;
-extern volatile int rodando;
+volatile int rodando = 1;
 extern RBtree situacao_atual;
 Queue system_message_cliete;
-const int simultaneas = 350;
+const int simultaneas = 500;
 pthread_t* simultaneas_id;
 
-TEST_CASE(websocket_init)
+void* enviar_reload(void *arg)
 {
-    MESSAGE("INCIANDO SERVIDOR WEBSOCKET");
-    signal(SIGINT, captura_signal);
-    Transport websocket = Tcp("client", ws_port);
-    pthread_t websocket_id;
-    pthread_create(&websocket_id, NULL, websocket_serve, (void *)&websocket);
+    sleep(7);
     for(int i = 0; i < 3; i++) {
         if(rodando == 0) break;
         if(situacao_atual.size != 0) Enqueue(&output, "reload", 0);
         sleep(15);
     }
     if(rodando == 1) rodando = 0;
-    pthread_join(websocket_id,NULL);
+    return NULL;
+}
+
+TEST_CASE(websocket_init)
+{
+    MESSAGE("INCIANDO SERVIDOR WEBSOCKET");
+    signal(SIGINT, captura_signal);
+    pthread_t teste_id;
+    pthread_create(&teste_id, NULL, enviar_reload, NULL);
+    pthread_detach(teste_id);
+    EXPECTED_EQ("ESPERASSE QUE SAI COM SUCESSO", websocket_serve(), 0);
     TESTE_PASS();
 }
 
@@ -60,6 +67,24 @@ TEST_CASE(websocket_cliente_teste)
     SUMARY(resultado, simultaneas);
     TESTE_PASS();
 }
+TEST_CASE(websocket_serveA){
+    signal(SIGINT, captura_signal);
+    websocket_serve();
+    TESTE_PASS();
+}
+
+TEST_CASE(tamanho_estruturas){
+    printf("Tamnho clientreWS: %ld\n", sizeof(CLientTranport));
+    printf("Tamnho serverWS: %ld\n", sizeof(ServerTransport));
+    printf("Tamnho Queen: %ld\n", sizeof(Queue));
+    printf("Tamnho struct Queuedata: %ld\n", sizeof(struct Queuedata));
+    printf("Tamnho Rbtree: %ld\n", sizeof(RBtree));
+    printf("Tamnho struct nodo: %ld\n", sizeof(struct nodo));
+    printf("Tamnho Hash: %ld\n", sizeof(HASH));
+    printf("Tamnho struct node: %ld\n", sizeof(struct node));
+    TESTE_PASS()
+}
 
 
 TEST_SUITE_ISOLATE(websocket_init, websocket_cliente_teste)
+//TEST_SUITE(tamanho_estruturas)

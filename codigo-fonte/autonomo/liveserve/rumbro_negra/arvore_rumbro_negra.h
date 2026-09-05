@@ -1,17 +1,22 @@
 #ifndef ARVORE_RUMBRO
 #define ARVORE_RUMBRO
 
+/*
 typedef  enum {
     BLACK,
     RUMBRO
 } COLOR;
+*/
+#define BLACK 'B'
+#define RUMBRO 'R'
 
+#pragma pack(1)
 struct nodo{
-    COLOR color;
+    char color;
     int key;
-    void *info;
     struct nodo *left, *right, *dad;
 };
+#pragma pack()
 
 typedef struct{
     struct nodo *raiz;
@@ -19,12 +24,12 @@ typedef struct{
 } RBtree;
 
 int newRBtree(RBtree *tree);
-int insertRBtree(RBtree *tree, int key, void *info);
+int insertRBtree(RBtree *tree, int key);
 int freeRB(RBtree *tree);
 int* porlevel(RBtree *tree);
 int* inorder(RBtree *tree);
 int* preorder(RBtree *tree);
-void* binarySearch(RBtree *tree, int key);
+int binarySearch(RBtree *tree, int key);
 int maxValue(RBtree *tree);
 int minValue(RBtree *tree);
 int removeRbtree(RBtree *tree, int key);

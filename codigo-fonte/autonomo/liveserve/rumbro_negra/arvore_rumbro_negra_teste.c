@@ -94,9 +94,7 @@ int compararArvore(RBtree *arv)
     for (int i = 0; i < arv->size ; i++) 
     {
 
-        int *alocar = malloc(sizeof(int));
-        *alocar = resultado[i];
-        insertRBtree(&treeTeste, resultado[i],  (void *)alocar);
+        insertRBtree(&treeTeste, resultado[i]);
     }
     resultadoTeste = preorder(&treeTeste);
 //    EXPECT_COND(resultadoTeste != NULL); 
@@ -134,9 +132,7 @@ TEST_CASE(testando_insercao)
         int inseridos = 0;
         for (int i = 0; i < MAXTESTE; i++) {
             values_teste[i] = numerosAletaorios(1000);
-            int *alocar = malloc(sizeof(int));
-            *alocar = values_teste[i];
-            if((insertRBtree(&arv, values_teste[i], (void *)alocar )) == 0) inseridos++;
+            if((insertRBtree(&arv, values_teste[i])) == 0) inseridos++;
             EXPECT_COND(checkarPropriedades(arv.raiz) > 0);
         }
         EXPECTED_EQ("TESTANDO INSEÇÃO...", inseridos,arv.size);
@@ -153,9 +149,7 @@ TEST_CASE(testando_preorder)
     newRBtree( &arv);
     for (int i = 0; i < MAXTESTE; i++) {
         values_teste[i] = numerosAletaorios(1000);
-        int *alocar = malloc(sizeof(int));
-        *alocar = values_teste[i];
-        insertRBtree(&arv, values_teste[i], (void *)alocar);
+        insertRBtree(&arv, values_teste[i]);
     }
     int* resultado = NULL;
     EXPECT_COND(compararArvore(&arv) > 0);   
@@ -175,9 +169,7 @@ TEST_CASE(testando_inorder)
         newRBtree( &arv);
         for (int i = 0; i < MAXTESTE; i++) {
             values_teste[i] = numerosAletaorios(1000);
-            int *alocar = malloc(sizeof(int));
-            *alocar = values_teste[i];
-            insertRBtree(&arv, values_teste[i], (void *)alocar);
+            insertRBtree(&arv, values_teste[i]);
         }
         EXPECT_COND(orderLista(inorder,  &arv) == 0);
         freeRB(&arv);
@@ -197,13 +189,11 @@ TEST_CASE(testando_busca)
         newRBtree( &arv);
         for (int i = 0; i < MAXTESTE; i++) {
             values_teste[i] = numerosAletaorios(1000);
-            int *alocar = malloc(sizeof(int));
-            *alocar = values_teste[i];
-            insertRBtree(&arv, values_teste[i], (void *)alocar);
+            insertRBtree(&arv, values_teste[i]);
         }
         int acertos = 0;
         for (int i = 0; i < MAXTESTE; i++) {
-            if((int *)binarySearch(&arv, values_teste[i]) != NULL) acertos++;
+            if(binarySearch(&arv, values_teste[i]) == values_teste[i]) acertos++;
         }
         if(acertos == MAXTESTE) teste++;
         freeRB(&arv);
@@ -221,9 +211,7 @@ TEST_CASE(testando_porlevel)
     int * resultado = NULL;
     for (int i = 0; i < MAXTESTE; i++) {
         values_teste[i] = numerosAletaorios(1000);
-        int *alocar = malloc(sizeof(int));
-        *alocar = values_teste[i];
-        insertRBtree(&arv, values_teste[i], (void *)alocar);
+        insertRBtree(&arv, values_teste[i]);
     }
     resultado =  testas_recurçao(porlevel, &arv);
     EXPECT_COND(resultado != NULL);
@@ -241,9 +229,7 @@ TEST_CASE(menor_maior)
         newRBtree( &arv);
         for (int i = 0; i < MAXTESTE; i++) {
             values_teste[i] = numerosAletaorios(1000);
-            int *alocar = malloc(sizeof(int));
-            *alocar = values_teste[i];
-            insertRBtree(&arv, values_teste[i], (void *)alocar);
+            insertRBtree(&arv, values_teste[i]);
         }
         
         int maior_valor = values_teste[0];
@@ -271,9 +257,7 @@ TEST_CASE(validarArvoreRumbro)
         newRBtree( &arv);
         for (int i = 0; i < MAXTESTE; i++) {
             values_teste[i] = numerosAletaorios(1000);
-            int *alocar = malloc(sizeof(int));
-            *alocar = values_teste[i];
-            insertRBtree(&arv, values_teste[i], (void *)alocar);
+            insertRBtree(&arv, values_teste[i]);
         }
         if(arv.raiz == NULL){
            return 0;
@@ -300,9 +284,7 @@ TEST_CASE(remocao_arvore)
         EXPECT_COND(arv.raiz == NULL && arv.size == 0);
         for (int i = 0; i < MAXTESTE; i++) {
             values_teste[i] = numerosAletaorios(1000);
-            int *alocar = malloc(sizeof(int));
-            *alocar = values_teste[i];
-            insertRBtree(&arv, values_teste[i], (void *)alocar);
+            insertRBtree(&arv, values_teste[i]);
         }
         int result = removeRbtree(&arv, values_teste[0]);
         EXPECTED_EQ("TESTANDO SE A REMOÇÃO FOI VALIDA", result, 1);

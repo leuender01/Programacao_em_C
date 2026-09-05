@@ -116,6 +116,7 @@
                 fprintf(stderr, COLOR_RED "Erro ao executar fork para o teste %d\n" COLOR_RESET, index); \
             }else if(pid == 0){ \
                 void *res = TESTS[index](NULL);\
+                free(pids);\
                 exit((intptr_t)res != 0);\
             } else { \
                 pids[index] = pid;\
@@ -148,6 +149,10 @@
          double time_final = (double)(fim - inicio) / CLOCKS_PER_SEC ; \
          printf( COLOR_YELOW "tempo de execulcao: %lf\n" COLOR_RESET, time_final);
 
+#define RESPONSE_PRINT(message) \
+    puts("_____RESPOSTA______");\
+    printf(type_fmt(message), message);\
+    puts("-_________________");
 
 char *gerarStringAletaria(void);
 int numerosAletaorios(int seed);

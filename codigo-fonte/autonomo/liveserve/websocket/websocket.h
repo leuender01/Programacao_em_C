@@ -4,12 +4,24 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "Queuen/Queue.h"
-#include "Tcp/Tcp.h"
 #include "capturar_signal.h"
 
-static int aguardar_fd(int fd, long timeout_usec);
-void calcular_chave_websocket(const char *key, char *output);
-void *websocket_serve(void *arg);
-char *ler_arquivo(const char* path, const char *type);
+typedef struct{
+    int connection_fd;
+    socklen_t client_size;
+    struct sockaddr_in myserve;
+    struct sockaddr_in client;
+    char buffer[1024];
+} ServerTransport;
+
+typedef  struct {
+    int connection_fd;
+    int websocket_ative;
+    Queue *input;
+    char buffer[1024];
+    
+} CLientTranport;
+
+int websocket_serve(void);
 
 #endif
